@@ -1,6 +1,6 @@
 # 길냥이 식당
 
-작은 밤, 따뜻한 한 끼. Phaser 3 + TypeScript + Vite로 만든 세로형 픽셀 힐링 경영 게임입니다. 현재 버전은 **0.2.2 · 보글보글 어묵**입니다.
+작은 밤, 따뜻한 한 끼. Phaser 3 + TypeScript + Vite로 만든 세로형 픽셀 힐링 경영 게임입니다. 현재 버전은 **0.2.3 · 톡, 건지는 손맛**입니다.
 
 ## 실행
 
@@ -21,6 +21,17 @@ npm run preview
 `dist/`가 정적 호스팅 배포 결과물입니다. GitHub Pages용 저장소 경로(`/gilnyang/`)는 `vite.config.ts`에서 설정했습니다. `main` 브랜치에 푸시하면 `.github/workflows/deploy.yml`이 빌드 후 Pages에 배포합니다. 처음 한 번 저장소의 **Settings → Pages → Source → GitHub Actions**를 선택하세요. 배포 주소는 `https://wanttogames.github.io/gilnyang/`입니다. 서버·DB·외부 API 없이 실행되며 입력과 진행 데이터는 서버로 전송하지 않습니다. 개발 서버의 핫 리로드 통신은 개발 환경에서만 사용됩니다.
 
 단일 HTML 파일을 다시 만들려면 `npm run build` 후 `python scripts/export_standalone.py`를 실행하세요. 생성되는 `release/gilnyang-play.html`은 그래픽·글꼴·게임 코드가 들어 있는 단일 실행 파일입니다. 내려받아 Chrome/Edge 등으로 열면 플레이할 수 있습니다. 저장은 파일/사이트 주소와 브라우저별로 분리되므로 지속적인 플레이에는 같은 주소를 사용하세요. HTML 파일을 옮기거나 이름을 바꾸면 저장이 달라질 수 있습니다.
+
+## 0.2.3 · 톡, 건지는 손맛
+
+- 익힘 시간: 사각 6초 / 삼각 7.5초 / 둥근 9초. 천천히 순서대로 건질 수 있습니다.
+- PERFECT는 진행률 56~80%로 약 1.44 / 1.8 / 2.16초입니다. 냄비 업그레이드가 있으면 조금 넓어집니다.
+- PERFECT 직후 92%까지 GOOD을 유지합니다. 너무 일찍/늦게 건져도 NORMAL로 완성합니다.
+- 주황 목표 칸과 현재 막대를 보여 주며, 상태 문구를 크게 표시합니다. 카드 전체를 클릭/터치하세요.
+- 건질 때 꼬치가 톡 튀어 올라 국물 위에 머무르고 물방울이 흩어집니다. 판정별 소리와 점수가 즉시 반응합니다. 소리 설정과 동작 줄이기 설정을 존중합니다.
+- 주먹밥, 다른 음식, 주문/서빙, 골드/친밀도, 날씨/레시피, 저장/스토리는 그대로 유지합니다.
+
+수정 파일: `src/data/cookingSteps.ts`, `src/types/Cooking.ts`, `src/systems/CookingManager.ts`, `src/scenes/OdenCooking.ts`, `src/style.css`, `src/assets/alley-sans.woff`, 버전/안내 문서.
 
 ## 0.2.2 · 어묵 개별 익힘 미니게임
 

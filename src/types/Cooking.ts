@@ -5,4 +5,4 @@ export type RiceballStep =
 export interface CookingStepScore { id: string; name: string; score: number }
 
 export interface OdenPiece { id: string; name: string; shape: 'square' | 'triangle' | 'round'; duration: number }
-export interface OdenCookingConfig { pieces: OdenPiece[]; goodStart: number; perfectCenter: number; perfectRange: number }
+export interface OdenCookingConfig { pieces: OdenPiece[]; goodStart: number; perfectCenter: number; perfectRange: number; lateGoodEnd: number }
