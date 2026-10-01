@@ -1,4 +1,5 @@
 import type { CustomerProgress } from './Customer';
+import type { Weather } from './Weather';
 export interface NightReport {
     served: number;
     gold: number;
@@ -7,12 +8,14 @@ export interface NightReport {
     discoveries: string[];
 }
 export interface SaveData {
-    version: 1;
+    version: 2;
     gold: number;
     level: number;
     night: number;
+    weather: Weather;
     customers: Record<string, CustomerProgress>;
     unlockedRecipes: string[];
+    pendingRecipeUnlocks: string[];
     upgrades: Record<string, number>;
     settings: {
         sound: boolean;

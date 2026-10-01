@@ -4,6 +4,15 @@ export interface Recipe {
     name: string;
     subtitle: string;
     ingredients: string[];
-    action: 'hold' | 'timing' | 'pour';
+    action: 'hold' | 'timing' | 'pour' | 'flip';
     duration: number;
+    extraIngredientIds: string[];
+    actionTitle: string;
+    actionButton: string;
+    unlock?: {
+        customerId: string;
+        visits: number;
+        intimacy: number;
+        reason: string;
+    };
 }

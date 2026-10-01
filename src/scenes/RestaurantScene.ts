@@ -1,3 +1,9 @@
+import { WeatherView } from '../game/WeatherView';
+import { WeatherManager } from '../systems/WeatherManager';
+import { weatherDefinitions } from '../data/weather';
+import { DialogueManager } from '../systems/DialogueManager';
+import { recipeById } from '../data/recipes';
+import type { Recipe } from '../types/Recipe';
 import Phaser from 'phaser';
 import { SaveManager, emptyReport } from '../systems/SaveManager';
 import { CustomerManager } from '../systems/CustomerManager';
@@ -7,8 +13,6 @@ import { audio } from '../systems/AudioManager';
 import { CookingScene } from './CookingScene';
 import { CustomerBookScene } from './CustomerBookScene';
 import { ResultScene } from './ResultScene';
-import { customers, customerById } from '../data/customers';
-import { dialogues } from '../data/dialogues';
 import { upgrades } from '../data/upgrades';
 import { ingredients } from '../data/ingredients';
 import { $, panel, on, toast, icon, modal, closeModal, food } from '../ui/UI';
@@ -21,15 +25,60 @@ export class RestaurantScene extends Phaser.Scene {
     chef!: Phaser.GameObjects.Image;
     phase = 'closed';
     current?: Customer;
+    private currentRecipe?: Recipe;
+    private weatherView!: WeatherView;
     private lanterns: Phaser.GameObjects.Rectangle[] = [];
     private stallSign!: Phaser.GameObjects.Text;
     constructor() { super('Restaurant'); }
-    create() { this.save = SaveManager.load(); audio.enabled = this.save.settings.sound; this.drawStreet(); this.hud(); this.nav(); this.time.addEvent({ delay: 3500, loop: true, callback: () => { [this.chef, this.guest].forEach(s => { if (!s)
-            return; const key = s.texture.key.replace('-blink', ''); s.setTexture(key + '-blink'); this.time.delayedCall(140, () => { if (s.active)
-            s.setTexture(key); }); }); } }); if (this.save.activeNight)
-        this.resumeNight();
-    else
-        this.welcome(); window.addEventListener('pagehide', () => SaveManager.save(this.save)); }
+    create() {
+        this.save = SaveManager.load();
+        audio.enabled = this.save.settings.sound;
+        this.drawStreet();
+        this.weatherView = new WeatherView(this);
+        this.refreshWeather();
+        SaveManager.save(this.save);
+        this.hud();
+        this.nav();
+        this.time.addEvent({ delay: 3500, loop: true, callback: () => {
+                [this.chef, this.guest].forEach(s => {
+                    if (!s)
+                        return;
+                    const key = s.texture.key.replace('-blink', '');
+                    s.setTexture(key + '-blink');
+                    this.time.delayedCall(140, () => {
+                        if (s.active)
+                            s.setTexture(key);
+                    });
+                });
+            } });
+        this.welcome();
+        this.showPendingRecipes(() => { if (this.save.activeNight)
+            this.resumeNight(); });
+        window.addEventListener('pagehide', () => SaveManager.save(this.save));
+    }
+    update(_time: number, delta: number) { this.weatherView?.update(delta); }
+    refreshWeather() {
+        this.weatherView.set(this.save.weather);
+        audio.setWeather(this.save.weather);
+        $('caption').textContent = weatherDefinitions[this.save.weather].caption;
+        document.getElementById('weather-badge')?.remove();
+        const badge = document.createElement('div');
+        badge.id = 'weather-badge';
+        badge.className = 'weather-badge';
+        badge.innerHTML = `${icon(this.save.weather)}<span>${weatherDefinitions[this.save.weather].name}</span>${this.save.weather === 'rain' ? '<small>까망이 찾아올지도 몰라요</small>' : '<small>오늘 밤의 골목</small>'}`;
+        $('interface').appendChild(badge);
+    }
+    showPendingRecipes(next: () => void) {
+        const id = this.save.pendingRecipeUnlocks[0];
+        if (!id) {
+            next();
+            return;
+        }
+        const r = recipeById(id);
+        audio.success();
+        modal(`<div class="recipe-discovery"><div class="eyebrow">A GIFT FROM A FRIEND</div><h2>새로운 레시피 발견!</h2>${food(id)}<h1>${r.name}</h1><p class="muted">${r.unlock!.reason}</p><p class="quote">${r.subtitle}</p><div class="recipe-ingredients">${r.ingredients.map(i => ingredients[i].name).join(' + ')}</div><button id="recipe-confirm" class="primary">메뉴판에 담아 두기 →</button></div>`);
+        on('recipe-confirm', () => { this.save.pendingRecipeUnlocks.shift(); SaveManager.save(this.save); closeModal(); this.showPendingRecipes(next); });
+    }
     drawStreet() {
         const g = this.add.graphics();
         const r = (x: number, y: number, w: number, h: number, c: number) => { g.fillStyle(c); g.fillRect(x, y, w, h); };
@@ -170,40 +219,106 @@ export class RestaurantScene extends Phaser.Scene {
         }
         this.decorations();
     }
-    decorations() { if (this.save.upgrades.lamp)
-        this.lanterns.forEach(l => l.setFillStyle(0xffd69a)); if (this.save.upgrades.sign)
-        this.stallSign.setText('길냥이 식당 · 夜'); if (this.save.upgrades.chair) {
-        this.add.rectangle(240, 742, 58, 8, 0xb16f66);
-        this.add.rectangle(520, 742, 58, 8, 0xb16f66);
-    } }
+    decorations() {
+        if (this.save.upgrades.lamp)
+            this.lanterns.forEach(l => l.setFillStyle(0xffd69a));
+        if (this.save.upgrades.sign)
+            this.stallSign.setText('길냥이 식당 · 夜');
+        if (this.save.upgrades.chair) {
+            this.add.rectangle(240, 742, 58, 8, 0xb16f66);
+            this.add.rectangle(520, 742, 58, 8, 0xb16f66);
+        }
+    }
     hud() { $('hud').innerHTML = `<div class="topline"><span class="mini-brand">골목의 작은 불빛</span><button id="sound" class="sound" aria-label="소리 ${this.save.settings.sound ? '끄기' : '켜기'}">${icon('sound')}<span>${this.save.settings.sound ? 'ON' : 'OFF'}</span></button></div><div class="stats"><div>${icon('moon')}<span><small>오늘의 밤</small><b>${this.save.night}<em>번째 밤</em></b></span></div><div>${icon('coin')}<span><small>보유 골드</small><b>${this.save.gold}<em>G</em></b></span></div><div>${icon('star')}<span><small>식당 레벨</small><b>${this.save.level}<em>LV</em></b></span></div></div>`; on('sound', () => { audio.unlock(); this.save.settings.sound = audio.toggle(); SaveManager.save(this.save); this.hud(); }); }
     nav() { $('nav').innerHTML = `<button id="menu-nav">${icon('menu')}<span>메뉴</span></button><button id="guests-nav">${icon('heart')}<span>손님</span></button><button id="shop-nav">${icon('shop')}<span>가게</span></button><button id="book-nav">${icon('book')}<span>도감</span></button>`; on('menu-nav', () => this.menu()); on('guests-nav', () => CustomerBookScene.open(this.save)); on('book-nav', () => CustomerBookScene.open(this.save)); on('shop-nav', () => this.shop()); }
-    welcome() { this.phase = 'closed'; $('caption').textContent = '밤이 내려앉으면, 작은 식당이 문을 열어요.'; panel(`<div class="eyebrow">A LITTLE RESTAURANT, A WARM NIGHT</div><h1>길냥이 식당</h1><p class="muted">오늘도 누군가의 마음을 데워 주세요.</p><button class="primary" id="start">${this.save.night === 1 ? '첫 밤의 문 열기' : '오늘 밤 영업 시작'} <span>→</span></button><div class="panel-foot">${icon('save')} 자동 저장 · 느긋하게 즐겨도 괜찮아요</div>`); on('start', () => { audio.unlock(); audio.note(392, .25); this.save.activeNight = { queue: CustomerManager.queue(this.save), report: emptyReport() }; SaveManager.save(this.save); this.nextGuest(); }); }
-    resumeNight() { if (this.save.activeNight!.report.served >= this.save.activeNight!.queue.length)
-        this.result();
-    else
-        this.nextGuest(); }
-    nextGuest() { if (this.save.activeNight!.report.served >= this.save.activeNight!.queue.length) {
-        this.result();
-        return;
-    } this.phase = 'arriving'; const c = CustomerManager.current(this.save); this.current = c; this.guest?.destroy(); panel(`<div class="eyebrow">${this.save.activeNight!.report.served + 1} / 5 · 오늘의 손님</div><h2>작은 발걸음이 들려요</h2><p class="muted">누가 찾아왔을까요?</p><div class="waiting"><i></i><i></i><i></i></div>`); $('caption').textContent = '따뜻한 냄새를 따라 친구가 찾아왔어요.'; this.guest = this.add.image(-65, 733, c.id).setScale(2.5).setDepth(2); this.tweens.add({ targets: this.guest, x: 246, duration: 1600, ease: 'Sine.easeOut', onComplete: () => { if (!this.guest)
-            return; this.tweens.add({ targets: this.guest, y: 730, duration: 1000, yoyo: true, repeat: -1 }); this.save.customers[c.id].unlocked = true; SaveManager.save(this.save); audio.note(330, .2); this.order(); } }); }
-    order() { this.phase = 'order'; const c = this.current!, r = RecipeManager.order(c), p = this.save.customers[c.id]; panel(`<div class="eyebrow">${this.save.activeNight!.report.served + 1} / 5 · 손님이 기다려요</div><div class="order-row"><div><h2>${c.name} <small>${c.species}</small></h2><p class="quote">“${dialogues[c.id].order}”</p></div>${food(r.id)}</div><div class="order-bottom"><div><small>오늘의 주문</small><strong>${r.name}</strong></div><button class="primary" id="cook">요리 시작 ${icon('arrow')}</button></div>${p.preferenceFound ? `<p class="preference">기억해 주세요 · ${ingredients[c.favoriteIngredients[0]].name}${c.favoriteIngredients[0] === 'warm' ? '' : ' 넉넉하게'}</p>` : ''}`); on('cook', () => { this.phase = 'cooking'; audio.note(440); new CookingScene(r, !!this.save.upgrades.pot, (quality, extra) => this.ready(quality, extra)); }); }
-    ready(q: Quality, extra: string) { this.phase = 'ready'; audio.success(); this.tweens.add({ targets: this.chef, angle: 5, duration: 140, yoyo: true, repeat: 3 }); panel(`<div class="eyebrow">정성을 담은 한 접시</div><div class="ready-row">${food(RecipeManager.order(this.current!).id)}<div><span class="quality q-${q === '완벽' ? 'perfect' : 'good'}">${q === '완벽' ? 'PERFECT · ' : ''}${q}</span><h2>${RecipeManager.order(this.current!).name}</h2><p class="muted">${extra ? ingredients[extra].name + '도 마음을 담아' : '따뜻할 때 전해 주세요.'}</p></div></div><button id="serve" class="primary">${this.current!.name}에게 음식 건네기 →</button>`); on('serve', () => this.serve(q, extra)); }
-    serve(q: Quality, extra: string) { this.phase = 'reaction'; const c = this.current!, reward = ProgressionManager.serve(this.save, c.id, q, extra); this.hud(); audio.success(); $('caption').textContent = '배부른 한 끼가, 다정한 기억이 됩니다.'; const plate = this.add.text(280, 700, '♥', { fontSize: '32px', color: '#eca19b' }); this.tweens.add({ targets: plate, y: 652, alpha: 0, duration: 1600, onComplete: () => plate.destroy() }); panel(`<div class="eyebrow">잘 먹었습니다</div><h2>${c.name}의 작은 인사</h2><p class="quote">“${reward.favorite ? dialogues[c.id].favorite : dialogues[c.id].thanks}”</p><div class="rewards"><span>${icon('coin')} +${reward.gold} G</span><span>${icon('heart')} 친밀도 +${reward.intimacy}${reward.favorite ? ' · 취향 보너스' : ''}</span></div><button id="next" class="primary">${reward.stories.length ? '이야기 들어 주기' : this.save.activeNight!.report.served === 5 ? '오늘 밤 마무리' : '다음 손님 맞이하기'} →</button>`); on('next', () => { if (reward.stories.length)
-        this.story(reward.stories);
-    else
-        this.depart(); }); }
-    story(lines: string[]) { const c = this.current!; let i = 0; const show = () => { panel(`<div class="eyebrow">조금 더 가까워진 마음 · 이야기 ${this.save.customers[c.id].storyStage}/3</div><h2>${c.name}의 이야기</h2><p class="quote">“${lines[i]}”</p><button id="story-next" class="primary">${i === lines.length - 1 ? '마음에 담아 두기' : '계속 듣기'} →</button>`); on('story-next', () => { if (++i < lines.length)
+    welcome() { this.phase = 'closed'; $('caption').textContent = weatherDefinitions[this.save.weather].caption; panel(`<div class="eyebrow">A LITTLE RESTAURANT, A WARM NIGHT</div><h1>길냥이 식당</h1><p class="muted">${weatherDefinitions[this.save.weather].greeting}</p><button class="primary" id="start">${this.save.night === 1 ? '첫 밤의 문 열기' : '오늘 밤 영업 시작'} <span>→</span></button><div class="panel-foot">${icon('save')} 자동 저장 · 느긋하게 즐겨도 괜찮아요</div>`); on('start', () => { audio.unlock(); audio.note(392, .25); this.save.activeNight = { queue: CustomerManager.queue(this.save), report: emptyReport() }; SaveManager.save(this.save); this.nextGuest(); }); }
+    resumeNight() {
+        if (this.save.activeNight!.report.served >= this.save.activeNight!.queue.length)
+            this.result();
+        else
+            this.nextGuest();
+    }
+    nextGuest() {
+        if (this.save.activeNight!.report.served >= this.save.activeNight!.queue.length) {
+            this.result();
+            return;
+        }
+        this.phase = 'arriving';
+        const c = CustomerManager.current(this.save);
+        this.current = c;
+        this.guest?.destroy();
+        panel(`<div class="eyebrow">${this.save.activeNight!.report.served + 1} / 5 · 오늘의 손님</div><h2>작은 발걸음이 들려요</h2><p class="muted">누가 찾아왔을까요?</p><div class="waiting"><i></i><i></i><i></i></div>`);
+        $('caption').textContent = this.save.weather === 'rain' ? '젖은 발걸음이 작은 지붕 아래로 들어와요.' : weatherDefinitions[this.save.weather].caption;
+        this.guest = this.add.image(-65, 733, c.id).setScale(2.5).setDepth(2);
+        this.tweens.add({ targets: this.guest, x: 246, duration: 1600, ease: 'Sine.easeOut', onComplete: () => {
+                if (!this.guest)
+                    return;
+                this.tweens.add({ targets: this.guest, y: 730, duration: 1000, yoyo: true, repeat: -1 });
+                this.save.customers[c.id].unlocked = true;
+                SaveManager.save(this.save);
+                audio.note(330, .2);
+                this.order();
+            } });
+    }
+    order() { this.phase = 'order'; const c = this.current!, r = this.currentRecipe = RecipeManager.order(c, this.save), p = this.save.customers[c.id]; panel(`<div class="eyebrow">${this.save.activeNight!.report.served + 1} / 5 · 손님이 기다려요</div><div class="order-row"><div><h2>${c.name} <small>${c.species}</small></h2><p class="quote">“${DialogueManager.order(c.id, this.save.weather, r)}”</p></div>${food(r.id)}</div><div class="order-bottom"><div><small>오늘의 주문</small><strong>${r.name}</strong></div><button class="primary" id="cook">요리 시작 ${icon('arrow')}</button></div>${p.preferenceFound ? `<p class="preference">기억해 주세요 · ${ingredients[c.favoriteIngredients[0]].name}${c.favoriteIngredients[0] === 'warm' ? '' : ' 넉넉하게'}</p>` : ''}`); on('cook', () => { this.phase = 'cooking'; audio.note(440); new CookingScene(r, !!this.save.upgrades.pot, (quality, extra) => this.ready(quality, extra)); }); }
+    ready(q: Quality, extra: string) { this.phase = 'ready'; audio.success(); this.tweens.add({ targets: this.chef, angle: 5, duration: 140, yoyo: true, repeat: 3 }); panel(`<div class="eyebrow">정성을 담은 한 접시</div><div class="ready-row">${food(this.currentRecipe!.id)}<div><span class="quality q-${q === '완벽' ? 'perfect' : 'good'}">${q === '완벽' ? 'PERFECT · ' : ''}${q}</span><h2>${this.currentRecipe!.name}</h2><p class="muted">${extra ? ingredients[extra].name + '도 마음을 담아' : '따뜻할 때 전해 주세요.'}</p></div></div><button id="serve" class="primary">${this.current!.name}에게 음식 건네기 →</button>`); on('serve', () => this.serve(q, extra)); }
+    serve(q: Quality, extra: string) {
+        this.phase = 'reaction';
+        const c = this.current!, reward = ProgressionManager.serve(this.save, c.id, q, extra);
+        this.hud();
+        audio.success();
+        $('caption').textContent = '배부른 한 끼가, 다정한 기억이 됩니다.';
+        const plate = this.add.text(280, 700, '♥', { fontSize: '32px', color: '#eca19b' });
+        this.tweens.add({ targets: plate, y: 652, alpha: 0, duration: 1600, onComplete: () => plate.destroy() });
+        panel(`<div class="eyebrow">잘 먹었습니다</div><h2>${c.name}의 작은 인사</h2><p class="quote">“${DialogueManager.reaction(c.id, this.save.weather, reward.favorite)}”</p><div class="rewards"><span>${icon('coin')} +${reward.gold} G</span><span>${icon('heart')} 친밀도 +${reward.intimacy}${reward.favorite ? ' · 취향 보너스' : ''}</span></div><button id="next" class="primary">${reward.stories.length ? '이야기 들어 주기' : this.save.activeNight!.report.served === 5 ? '오늘 밤 마무리' : '다음 손님 맞이하기'} →</button>`);
+        on('next', () => this.showPendingRecipes(() => {
+            if (reward.stories.length)
+                this.story(reward.stories);
+            else
+                this.depart();
+        }));
+    }
+    story(lines: string[]) {
+        const c = this.current!;
+        let i = 0;
+        const show = () => {
+            panel(`<div class="eyebrow">조금 더 가까워진 마음 · 이야기 ${this.save.customers[c.id].storyStage}/3</div><h2>${c.name}의 이야기</h2><p class="quote">“${lines[i]}”</p><button id="story-next" class="primary">${i === lines.length - 1 ? '마음에 담아 두기' : '계속 듣기'} →</button>`);
+            on('story-next', () => {
+                if (++i < lines.length)
+                    show();
+                else {
+                    toast('도감에 새로운 이야기를 남겼어요.');
+                    this.depart();
+                }
+            });
+        };
         show();
-    else {
-        toast('도감에 새로운 이야기를 남겼어요.');
-        this.depart();
-    } }); }; show(); }
+    }
     depart() { this.phase = 'leaving'; panel('<div class="eyebrow">또 만나요</div><h2>다음 밤에도 기다릴게요.</h2><p class="muted">골목에 따뜻한 기억 하나가 남았어요.</p>'); this.tweens.add({ targets: this.guest, x: 800, duration: 1100, onComplete: () => { this.guest?.destroy(); this.guest = undefined; this.nextGuest(); } }); }
-    result() { this.phase = 'result'; this.guest?.destroy(); $('caption').textContent = '불을 끄기 전, 오늘의 따뜻함을 세어 보아요.'; ResultScene.show(this.save, () => { this.save.night++; this.save.activeNight = null; SaveManager.save(this.save); this.hud(); this.welcome(); }); }
-    menu() { modal(`<div class="sheet-head"><div><span class="eyebrow">KITCHEN NOTES</span><h2>오늘의 메뉴</h2></div><button id="close" class="close" aria-label="닫기">×</button></div><p class="muted">재료는 늘 충분해요. 정성만 준비해 주세요.</p>${RecipeManager.all().map(r => `<div class="recipe-card">${food(r.id)}<div><h3>${r.name}</h3><p>${r.subtitle}</p><small>${r.ingredients.map(i => ingredients[i].name).join(' + ')}</small></div></div>`).join('')}<div class="hint">참치 주먹밥은 꾹 누르기 · 어묵은 타이밍<br>우유는 적당한 높이에서 놓기</div>`); on('close', closeModal); }
-    shop() { modal(`<div class="sheet-head"><div><span class="eyebrow">A COZIER PLACE</span><h2>식당을 조금 더 포근하게</h2></div><button id="close" class="close" aria-label="닫기">×</button></div><p class="muted">보유 골드 <b>${this.save.gold} G</b></p>${upgrades.map(u => `<div class="upgrade"><div><h3>${u.name}</h3><p>${u.description}</p></div><button id="buy-${u.id}" ${this.save.upgrades[u.id] || this.save.gold < u.cost ? 'disabled' : ''}>${this.save.upgrades[u.id] ? '꾸밈 완료' : u.cost + ' G'}</button></div>`).join('')}<div class="hint">다음 친구들의 방문 · 보리 4번째 밤 / 달이 7번째 밤 / 호두 10번째 밤</div>`); on('close', closeModal); for (const u of upgrades)
-        on('buy-' + u.id, () => { if (this.save.gold < u.cost || this.save.upgrades[u.id])
-            return; this.save.gold -= u.cost; this.save.upgrades[u.id] = 1; SaveManager.save(this.save); this.decorations(); this.hud(); audio.success(); this.shop(); toast('식당이 조금 더 포근해졌어요.'); }); }
+    result() { this.phase = 'result'; this.guest?.destroy(); $('caption').textContent = '불을 끄기 전, 오늘의 따뜻함을 세어 보아요.'; ResultScene.show(this.save, () => { this.save.night++; this.save.weather = WeatherManager.roll(this.save.night); this.save.activeNight = null; this.refreshWeather(); SaveManager.save(this.save); this.hud(); this.welcome(); }); }
+    menu() {
+        modal(`<div class="sheet-head"><div><span class="eyebrow">KITCHEN NOTES · ${this.save.unlockedRecipes.length}/5</span><h2>오늘의 메뉴</h2></div><button id="close" class="close" aria-label="닫기">×</button></div><p class="muted">재료는 늘 충분해요. 단골의 마음에서 새 메뉴를 배워요.</p>${RecipeManager.all().map(r => {
+            const unlocked = this.save.unlockedRecipes.includes(r.id), u = r.unlock;
+            const progress = u ? this.save.customers[u.customerId] : null;
+            return `<div class="recipe-card ${unlocked ? '' : 'recipe-locked'}">${food(r.id)}<div><h3>${r.name}${unlocked ? '' : ' · 미발견'}</h3><p>${r.subtitle}</p><small>${unlocked ? r.ingredients.map(i => ingredients[i].name).join(' + ') : `${u!.customerId === 'kkamang' ? '까망' : '몽실'} 방문 ${Math.min(progress!.visitCount, u!.visits)}/${u!.visits}회 · 친밀도 ${Math.min(progress!.intimacy, u!.intimacy)}/${u!.intimacy}`}</small></div></div>`;
+        }).join('')}<div class="hint">붕어빵은 한 번 뒤집은 뒤 꺼내요.<br>새 메뉴를 배우면 좋아하는 친구가 다음 방문에 주문해요.</div>`);
+        on('close', closeModal);
+    }
+    shop() {
+        modal(`<div class="sheet-head"><div><span class="eyebrow">A COZIER PLACE</span><h2>식당을 조금 더 포근하게</h2></div><button id="close" class="close" aria-label="닫기">×</button></div><p class="muted">보유 골드 <b>${this.save.gold} G</b></p>${upgrades.map(u => `<div class="upgrade"><div><h3>${u.name}</h3><p>${u.description}</p></div><button id="buy-${u.id}" ${this.save.upgrades[u.id] || this.save.gold < u.cost ? 'disabled' : ''}>${this.save.upgrades[u.id] ? '꾸밈 완료' : u.cost + ' G'}</button></div>`).join('')}<div class="hint">다음 친구들의 방문 · 보리 4번째 밤 / 달이 7번째 밤 / 호두 10번째 밤</div>`);
+        on('close', closeModal);
+        for (const u of upgrades)
+            on('buy-' + u.id, () => {
+                if (this.save.gold < u.cost || this.save.upgrades[u.id])
+                    return;
+                this.save.gold -= u.cost;
+                this.save.upgrades[u.id] = 1;
+                SaveManager.save(this.save);
+                this.decorations();
+                this.hud();
+                audio.success();
+                this.shop();
+                toast('식당이 조금 더 포근해졌어요.');
+            });
+    }
 }
