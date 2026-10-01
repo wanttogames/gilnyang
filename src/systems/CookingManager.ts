@@ -7,11 +7,18 @@ export class CookingManager {
         if (error <= .25) return 89 - Math.round((error - perfectRange) / (.25 - perfectRange) * 29);
         return Math.max(0, 59 - Math.round((error - .25) / .25 * 59));
     }
-    static riceballTotal(scores: number[]): number {
+    static totalScore(scores: number[]): number {
         return scores.length ? Math.round(scores.reduce((sum, score) => sum + Math.max(0, Math.min(100, score)), 0) / scores.length) : 0;
     }
-    static riceballGrade(score: number): { quality: Quality; label: string } {
+    static scoreGrade(score: number): { quality: Quality; label: string } {
         return score >= 90 ? { quality: '완벽', label: 'PERFECT' } : score >= 60 ? { quality: '맛있음', label: 'GOOD' } : { quality: '보통', label: 'NORMAL' };
+    }
+    static odenState(progress: number, goodStart: number, center: number, range: number): { label: string; tone: string; score: number } {
+        const start = center - range, end = center + range;
+        if (progress < goodStart) return { label: '설익음', tone: 'raw', score: Math.max(0, Math.round(progress / goodStart * 59)) };
+        if (progress < start) return { label: '적당함', tone: 'good', score: 60 + Math.round((progress - goodStart) / (start - goodStart) * 29) };
+        if (progress <= end) return { label: 'PERFECT', tone: 'perfect', score: 100 - Math.round(Math.abs(progress - center) / range * 5) };
+        return { label: '퍼짐', tone: 'over', score: Math.max(0, Math.round((1 - Math.min(1, progress)) / (1 - end) * 59)) };
     }
     static reward(q: Quality) { return q === '완벽' ? { gold: 15, intimacy: 3 } : q === '맛있음' ? { gold: 12, intimacy: 2 } : { gold: 10, intimacy: 1 }; }
 }

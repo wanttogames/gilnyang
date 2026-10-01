@@ -1,3 +1,4 @@
+import { OdenCooking } from './OdenCooking';
 import { RiceballCooking } from './RiceballCooking';
 import type { Recipe, Quality } from '../types/Recipe';
 import { ingredients } from '../data/ingredients';
@@ -41,6 +42,10 @@ export class CookingScene {
     private action() {
         if (this.recipe.id === 'rice') {
             new RiceballCooking(this.recipe, this.pot, this.extra, this.finish);
+            return;
+        }
+        if (this.recipe.id === 'oden') {
+            new OdenCooking(this.recipe, this.pot, this.extra, this.finish);
             return;
         }
         const r = this.recipe, hold = r.action === 'hold';

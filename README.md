@@ -1,6 +1,6 @@
 # 길냥이 식당
 
-작은 밤, 따뜻한 한 끼. Phaser 3 + TypeScript + Vite로 만든 세로형 픽셀 힐링 경영 게임입니다. 현재 버전은 **0.2.1 · 꼭꼭 주먹밥**입니다.
+작은 밤, 따뜻한 한 끼. Phaser 3 + TypeScript + Vite로 만든 세로형 픽셀 힐링 경영 게임입니다. 현재 버전은 **0.2.2 · 보글보글 어묵**입니다.
 
 ## 실행
 
@@ -21,6 +21,32 @@ npm run preview
 `dist/`가 정적 호스팅 배포 결과물입니다. GitHub Pages용 저장소 경로(`/gilnyang/`)는 `vite.config.ts`에서 설정했습니다. `main` 브랜치에 푸시하면 `.github/workflows/deploy.yml`이 빌드 후 Pages에 배포합니다. 처음 한 번 저장소의 **Settings → Pages → Source → GitHub Actions**를 선택하세요. 배포 주소는 `https://wanttogames.github.io/gilnyang/`입니다. 서버·DB·외부 API 없이 실행되며 입력과 진행 데이터는 서버로 전송하지 않습니다. 개발 서버의 핫 리로드 통신은 개발 환경에서만 사용됩니다.
 
 단일 HTML 파일을 다시 만들려면 `npm run build` 후 `python scripts/export_standalone.py`를 실행하세요. 생성되는 `release/gilnyang-play.html`은 그래픽·글꼴·게임 코드가 들어 있는 단일 실행 파일입니다. 내려받아 Chrome/Edge 등으로 열면 플레이할 수 있습니다. 저장은 파일/사이트 주소와 브라우저별로 분리되므로 지속적인 플레이에는 같은 주소를 사용하세요. HTML 파일을 옮기거나 이름을 바꾸면 저장이 달라질 수 있습니다.
+
+## 0.2.2 · 어묵 개별 익힘 미니게임
+
+기존 주먹밥 3단계는 유지합니다. 어묵의 마지막 `한 번 건져내기`를 `사각·삼각·둥근 꼬치 3개를 각각 건지기`로 바꿉니다. 재료·국물 추가 선택, 주문·완성·서빙·보상·저장 흐름은 그대로입니다.
+
+- 꼬치마다 익는 속도가 조금 다릅니다(전체 익힘 6.5/7/7.5초).
+- **파랑 설익음 → 노랑 적당함 → 주황 PERFECT → 빨강 퍼짐**. 각 카드에 상태 이름과 진행 게이지를 표시합니다.
+- 어묵 그림뿐 아니라 카드 전체가 터치 영역입니다. PC 클릭, 터치, 버튼의 기본 키보드 입력을 지원합니다.
+- 주황 구간은 약 1.3~1.5초입니다. 냄비 업그레이드는 기존과 마찬가지로 PERFECT 범위를 넓힙니다.
+- 모두 건진 뒤 개별 점수와 평균 결과를 확인하고 기존 서빙 화면으로 복귀합니다.
+- 두 음식 공통으로 `0~59 NORMAL / 60~89 GOOD / 90~100 PERFECT`. 기존 +10/+12/+15 골드와 +1/+2/+3 친밀도를 사용하며 취향·방석 보너스도 유지합니다.
+- 너무 빨리 또는 늦게 건져도 NORMAL로 완성됩니다. 조리 중 새로고침하면 해당 주문부터 다시 시작하고, 서빙 후에는 보상을 중복 지급하지 않습니다.
+- 조리 시간은 재료·국물 선택을 포함해 약 6~12초를 목표로 하며, 결과를 읽는 시간과 입력 속도에 따라 달라집니다.
+
+### 이번 변경 파일
+
+- `src/scenes/OdenCooking.ts`: 개별 익힘, 터치 건지기, 애니메이션/효과음, 결과, 기존 서빙 복귀.
+- `src/scenes/CookingScene.ts`: 어묵 미니게임 연결.
+- `src/data/cookingSteps.ts`, `src/types/Cooking.ts`: 어묵 형태·속도·판정 데이터 추가.
+- `src/systems/CookingManager.ts`: 공통 평균/등급 함수, 어묵 상태·점수 계산. 기존 보상 유지.
+- `src/scenes/RiceballCooking.ts`: 공통 점수 함수와 조리 화면 클래스명 사용. 단계·조작·판정은 유지.
+- `src/style.css`: 어묵 냄비·큰 카드·상태 색·진행 게이지.
+- `src/assets/alley-sans.woff`: 새 조리 문구 한글.
+- `package.json`, `package-lock.json`, `README.md`, `CHANGELOG.md`, `VERIFICATION.md`: 버전과 안내.
+
+손님·대사·날씨·레시피 데이터, SaveManager, ProgressionManager, RestaurantScene은 수정하지 않았습니다. 우유·라면·붕어빵 조리와 스토리 시스템도 그대로입니다.
 
 ## 0.2.1 · 참치 주먹밥만 개선
 
@@ -66,7 +92,7 @@ npm run preview
 
 ### 기존 프로젝트에 적용
 
-`gilnyang-update-v0.2.1.zip`은 0.2.0 프로젝트용 변경 파일입니다. 이를 **현재 프로젝트 폴더 안에** 풀고 같은 이름의 파일을 덮어씁니다. `.git`과 기존 배포 설정은 유지됩니다. 기존 프로젝트 안에 `gilnyang` 폴더를 추가로 중첩하지 마세요.
+`gilnyang-update-v0.2.2.zip`은 0.2.1 프로젝트용 변경 파일입니다. 이를 **현재 프로젝트 폴더 안에** 풀고 같은 이름의 파일을 덮어씁니다. `.git`과 기존 배포 설정은 유지됩니다. 기존 프로젝트 안에 `gilnyang` 폴더를 추가로 중첩하지 마세요.
 
 PowerShell에서 현재 프로젝트 폴더로 이동한 후:
 
@@ -74,7 +100,7 @@ PowerShell에서 현재 프로젝트 폴더로 이동한 후:
 npm ci
 npm run build
 git add .
-git commit -m "Improve riceball cooking minigame"
+git commit -m "Add individual oden cooking minigame"
 git push origin main
 ```
 
@@ -86,7 +112,7 @@ git push origin main
 - 나비·두부·까망·몽실·콩이 5명의 첫 밤, 이후 밤마다 5회의 가중치 추첨 방문
 - 등장 → 착석 → 주문 → 재료 선택 → 간단 요리 → 제공 → 대화 → 다음 손님
 - 참치 주먹밥: 기존 재료·취향 선택 후 밥 양 타이밍 → 좌우 번갈아 모양 만들기 → 김 감기 타이밍
-- 어묵: 재료 선택 후 초록 구간에서 건져내기
+- 어묵: 기존 재료·국물 선택 후 꼬치 3개를 상태 색·게이지에 맞춰 각각 건지기
 - 우유: 꾹 눌러 초록 구간까지 따르고 놓기
 - 보통/맛있음/완벽 품질, 실패로 손님이 떠나지 않음
 - 품질별 골드 +10/+12/+15, 친밀도 +1/+2/+3

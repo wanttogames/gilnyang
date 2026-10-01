@@ -18,7 +18,7 @@ export class RiceballCooking {
     private lastPress = 0;
 
     constructor(private recipe: Recipe, private pot: boolean, private extra: string, private finish: (quality: Quality, extra: string) => void) {
-        $('interface').classList.add('riceball-cooking');
+        $('interface').classList.add('minigame-cooking');
         $('panel').classList.add('minigame-panel');
         this.render();
     }
@@ -103,7 +103,7 @@ export class RiceballCooking {
         $('panel').onkeydown = null;
         this.scores.push({ id: step.id, name: step.title, score });
         audio.note(score >= 90 ? 784 : score >= 60 ? 659 : 523, .25);
-        const grade = CookingManager.riceballGrade(score);
+        const grade = CookingManager.scoreGrade(score);
         $('mini-feedback').innerHTML = `<b>${grade.label} · ${score}점</b> ${score >= 90 ? '정성이 딱 맞았어요!' : score >= 60 ? '맛있는 모양이에요.' : '괜찮아요. 따뜻한 한 끼가 될 거예요.'}`;
         const last = this.index === riceballSteps.length - 1;
         $('mini-controls').innerHTML = `<button id="rice-next" class="primary">${last ? '요리 결과 보기' : '다음 손길'} →</button>`;
@@ -111,8 +111,8 @@ export class RiceballCooking {
     }
 
     private results() {
-        const score = CookingManager.riceballTotal(this.scores.map(s => s.score));
-        const grade = CookingManager.riceballGrade(score);
+        const score = CookingManager.totalScore(this.scores.map(s => s.score));
+        const grade = CookingManager.scoreGrade(score);
         panel(`<div class="eyebrow">참치 주먹밥 · 세 번의 작은 정성</div><div class="rice-result-title">${food('rice')}<div><span class="quality q-${score >= 90 ? 'perfect' : 'good'}">${grade.label}</span><h2>${score} / 100점</h2></div></div><div class="rice-step-results">${this.scores.map((s, i) => `<div><span>${i + 1}. ${i === 0 ? '밥 양' : i === 1 ? '모양 만들기' : '김 감기'}</span><b>${s.score}점</b></div>`).join('')}</div><p class="muted">${score >= 90 ? '바삭한 김, 꼭 맞는 모양. 맛있는 한 끼가 준비됐어요.' : '모양이 조금 달라도, 따뜻한 마음은 그대로예요.'}</p><button id="rice-finish" class="primary">음식 담아 주기 →</button>`);
         on('rice-finish', () => {
             if (this.finished) return;
@@ -120,7 +120,7 @@ export class RiceballCooking {
             cancelAnimationFrame(this.frame);
             $('panel').onkeydown = null;
             $('panel').classList.remove('minigame-panel');
-            $('interface').classList.remove('riceball-cooking');
+            $('interface').classList.remove('minigame-cooking');
             $('nav').classList.remove('locked');
             // Let the input finish before displaying the existing serving button.
             window.setTimeout(() => this.finish(grade.quality, this.extra), 0);
