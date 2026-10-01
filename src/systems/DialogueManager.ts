@@ -1,10 +1,18 @@
+import { CharacterStoryManager } from './CharacterStoryManager';
+import { nabiAfterStoryOrders, nabiPreferenceOrders } from '../data/characterStories';
 import { rainDialogues } from '../data/rainDialogues';
 import type { Weather } from '../types/Weather';
 import type { Recipe } from '../types/Recipe';
 import { dialogues } from '../data/dialogues';
 import type { CustomerProgress } from '../types/Customer';
 export class DialogueManager {
-    static order(id: string, weather: Weather, recipe: Recipe): string {
+    static order(id: string, weather: Weather, recipe: Recipe, progress?: CustomerProgress): string {
+        if (id === 'nabi' && progress) {
+            const extra = CharacterStoryManager.complete(id, progress) ? nabiAfterStoryOrders : (progress.characterStory?.stage ?? 0) >= 2 ? nabiPreferenceOrders : [];
+            const base = weather === 'rain' ? rainDialogues[id].order.replace('{food}', recipe.name) : dialogues[id].order;
+            const pool = [base, ...extra];
+            return pool[Math.floor(Math.random() * pool.length)];
+        }
         if (weather === 'rain')
             return rainDialogues[id].order.replace('{food}', recipe.name);
         if (recipe.id === 'ramen')
@@ -17,6 +25,7 @@ export class DialogueManager {
         return favorite ? dialogues[id].favorite : weather === 'rain' ? rainDialogues[id].thanks : dialogues[id].thanks;
     }
     static unlock(id: string, p: CustomerProgress): string[] {
+        if (CharacterStoryManager.events(id).length) return [];
         const thresholds = [[5, 10], [10, 25], [15, 50]];
         const t = thresholds[p.storyStage];
         if (t && p.visitCount >= t[0] && p.intimacy >= t[1]) {

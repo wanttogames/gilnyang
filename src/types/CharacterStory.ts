@@ -1,0 +1,20 @@
+export type StoryEmotion = 'normal' | 'shy' | 'quiet' | 'smile';
+export type StoryPart = 'before' | 'after';
+export interface StoryLine { speaker: 'guest' | 'chef'; text: string; emotion?: StoryEmotion; pause?: number }
+export interface CharacterStoryEvent {
+    id: string;
+    title: string;
+    minVisits: number;
+    minIntimacy: number;
+    visitsSincePrevious: number;
+    before: StoryLine[];
+    after: StoryLine[];
+    summary: string;
+    revealsPreference?: boolean;
+}
+export interface CharacterStoryProgress {
+    stage: number;
+    lastEventVisit: number;
+    lastEventNight: number;
+    pending?: { eventId: string; visit: number; night: number; part: StoryPart; line: number };
+}

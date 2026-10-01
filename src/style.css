@@ -49,3 +49,14 @@
 @keyframes oden-bubble{0%{transform:translateY(0);opacity:0}30%{opacity:.55}100%{transform:translateY(-45px);opacity:0}}
 .oden-panel .mini-feedback{margin:8px 0;font-size:21px;color:#775d46}
 @media(prefers-reduced-motion:reduce){.oden-pluck:after{display:none}}
+
+/* Character stories reuse the restaurant panel and existing touch controls. */
+#panel.story-dialogue{top:805px;height:392px;padding:23px 28px}
+.story-dialogue h2{font-size:28px;margin:8px 0 10px}
+.story-speaker{font-size:20px;color:#95694f;font-weight:700;margin-bottom:7px}
+.story-dialogue .quote{font-size:25px;line-height:1.5;min-height:116px;color:#6c5442;word-break:keep-all}
+.story-dialogue .primary{min-height:104px;margin-top:10px;font-size:22px}
+.story-complete-badge{display:inline-block;font-size:16px;line-height:1.6;padding:6px 10px;margin:6px 0;color:#7b6144;background:#e4d1ad;border:1px solid #c5a978;border-radius:6px}
+
+/* The book sheet covers scene badges while it is open. */
+#modal{z-index:10}

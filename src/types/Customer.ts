@@ -1,3 +1,4 @@
+import type { CharacterStoryProgress } from './CharacterStory';
 export interface Customer {
     id: string;
     name: string;
@@ -16,4 +17,5 @@ export interface CustomerProgress {
     storyStage: number;
     unlocked: boolean;
     preferenceFound: boolean;
+    characterStory?: CharacterStoryProgress;
 }

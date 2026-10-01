@@ -1,3 +1,4 @@
+import { CharacterStoryManager } from './CharacterStoryManager';
 import type { SaveData, NightReport } from '../types/SaveData';
 import { customers } from '../data/customers';
 import { recipes } from '../data/recipes';
@@ -5,7 +6,7 @@ import { WeatherManager } from './WeatherManager';
 import { RecipeManager } from './RecipeManager';
 export const SAVE_KEY = 'alley-cat-diner-v1';
 export const emptyReport = (): NightReport => ({ served: 0, gold: 0, perfect: 0, intimacy: {}, discoveries: [] });
-export function newSave(): SaveData { return { version: 2, gold: 0, level: 1, night: 1, weather: 'clear', customers: Object.fromEntries(customers.map(c => [c.id, { intimacy: 0, visitCount: 0, storyStage: 0, unlocked: false, preferenceFound: false }])), unlockedRecipes: ['rice', 'oden', 'milk'], pendingRecipeUnlocks: [], upgrades: {}, settings: { sound: true }, activeNight: null }; }
+export function newSave(): SaveData { return { version: 2, gold: 0, level: 1, night: 1, weather: 'clear', customers: Object.fromEntries(customers.map(c => [c.id, { intimacy: 0, visitCount: 0, storyStage: 0, unlocked: false, preferenceFound: false, characterStory: CharacterStoryManager.restore(c.id, undefined, 0) }])), unlockedRecipes: ['rice', 'oden', 'milk'], pendingRecipeUnlocks: [], upgrades: {}, settings: { sound: true }, activeNight: null }; }
 export class SaveManager {
     static load(): SaveData {
         try {
@@ -19,7 +20,7 @@ export class SaveManager {
             for (const c of customers) {
                 const v = s.customers[c.id];
                 if (v && Number.isFinite(v.intimacy) && v.intimacy >= 0 && Number.isInteger(v.visitCount) && v.visitCount >= 0)
-                    base.customers[c.id] = { intimacy: v.intimacy, visitCount: v.visitCount, storyStage: Math.min(3, Math.max(0, Math.floor(v.storyStage || 0))), unlocked: !!v.unlocked, preferenceFound: !!v.preferenceFound };
+                    base.customers[c.id] = { intimacy: v.intimacy, visitCount: v.visitCount, storyStage: Math.min(3, Math.max(0, Math.floor(v.storyStage || 0))), unlocked: !!v.unlocked, preferenceFound: !!v.preferenceFound, characterStory: CharacterStoryManager.restore(c.id, v.characterStory, v.visitCount) };
             }
             base.gold = s.gold;
             base.night = s.night;
