@@ -1,0 +1,1 @@
+export const upgrades = [{ id: 'lamp', name: '따뜻한 등불', description: '골목을 더 환하게 밝혀요', cost: 60 }, { id: 'chair', name: '폭신한 방석', description: '서빙마다 친밀도 +1', cost: 90 }, { id: 'pot', name: '좋은 냄비', description: '완벽 타이밍 범위 +10%', cost: 120 }, { id: 'sign', name: '새 나무 간판', description: '식당의 이름이 더 선명해져요', cost: 80 }];
