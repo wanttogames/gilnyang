@@ -1,3 +1,4 @@
+import { RiceballCooking } from './RiceballCooking';
 import type { Recipe, Quality } from '../types/Recipe';
 import { ingredients } from '../data/ingredients';
 import { CookingManager } from '../systems/CookingManager';
@@ -38,6 +39,10 @@ export class CookingScene {
         on('no-extra', () => this.action());
     }
     private action() {
+        if (this.recipe.id === 'rice') {
+            new RiceballCooking(this.recipe, this.pot, this.extra, this.finish);
+            return;
+        }
         const r = this.recipe, hold = r.action === 'hold';
         const instruction = hold ? '2초 동안 꾹 누른 뒤 손을 놓아 주세요.' : this.timed ? (r.action === 'flip' ? '초록 구간에서 뒤집고, 다시 초록 구간에서 꺼내요.' : '초록 구간에서 버튼을 눌러 주세요.') : '꾹 눌렀다가 초록 구간에서 놓아 주세요.';
         panel(`<div class="eyebrow">마지막 손길${r.action === 'flip' ? ' · 1/2' : ''}</div><div class="cook-title">${food(r.id)}<div><h2 id="action-title">${r.actionTitle}</h2><p class="muted">${instruction}</p></div></div><div class="meter ${hold ? 'hold-meter' : ''}"><div class="target" style="left:${hold ? '82' : this.pot ? '62' : '63'}%;width:${hold ? '18' : this.pot ? '20' : '18'}%"></div><div id="fill"></div><div id="needle"></div></div><button id="action" class="primary cook-action">${r.actionButton}</button><div class="hint" id="cook-hint">놓쳐도 괜찮아요. 모든 음식은 따뜻한 한 끼가 돼요.</div>`);
