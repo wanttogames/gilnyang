@@ -7,8 +7,10 @@ export function nabiEar(right = false): Pixel[] {
     return [[3,0,3,2,fur],[2,2,5,3,fur],[1,5,8,4,fur],[0,9,11,6,fur],
         [3,5,3,3,pink],[3,8,5,4,pink]];
 }
-export const nabiTail: Pixel[] = [[3,0,3,5,ink],[1,3,4,7,ink],[0,8,4,9,white],
-    [1,15,4,5,orange],[2,19,5,5,orange]];
+// Root embedded behind the right hip; tip follows a long, narrow upward curve.
+export const nabiTailLayout = { width: 18, height: 22, pivotX: 3, pivotY: 13, anchorX: 32, anchorY: 38 };
+export const nabiTail: Pixel[] = [[0,11,6,5,orange],[4,14,6,4,orange],[9,14,5,3,white],
+    [12,10,4,6,white],[14,5,3,7,ink],[14,1,2,6,ink],[13,0,3,2,ink]];
 const move = (pixels: Pixel[], x: number, y: number): Pixel[] => pixels.map(([px,py,w,h,c]) => [px+x,py+y,w,h,c]);
 export type RefinedCharacterId = 'nabi' | 'dubu' | 'kong' | 'kkamang' | 'mongsil';
 export function hasCharacterArt(id: string): id is RefinedCharacterId {
@@ -76,7 +78,7 @@ export function characterPixels(id: RefinedCharacterId, blink = false, bodyOnly 
         ];
     }
     if (id === 'nabi') {
-        const pixels: Pixel[] = bodyOnly ? [] : [...move(nabiTail,37,19)];
+        const pixels: Pixel[] = bodyOnly ? [] : [...move(nabiTail,nabiTailLayout.anchorX - nabiTailLayout.pivotX,nabiTailLayout.anchorY - nabiTailLayout.pivotY)];
         pixels.push(
             [14,31,20,12,white],[12,36,5,8,orange],[29,34,5,9,ink],
             [13,43,8,4,white],[27,43,8,4,white],

@@ -1,6 +1,6 @@
 # 길냥이 식당
 
-작은 밤, 따뜻한 한 끼. Phaser 3 + TypeScript + Vite로 만든 세로형 픽셀 힐링 경영 게임입니다. 현재 버전은 **0.3.5 · 골목 친구들의 다섯 얼굴**입니다.
+작은 밤, 따뜻한 한 끼. Phaser 3 + TypeScript + Vite로 만든 세로형 픽셀 힐링 경영 게임입니다. 현재 버전은 **0.3.6 · 몸 뒤에 이어지는 꼬리**입니다.
 
 ## 실행
 
@@ -21,6 +21,14 @@ npm run preview
 `dist/`가 정적 호스팅 배포 결과물입니다. GitHub Pages용 저장소 경로(`/gilnyang/`)는 `vite.config.ts`에서 설정했습니다. `main` 브랜치에 푸시하면 `.github/workflows/deploy.yml`이 빌드 후 Pages에 배포합니다. 처음 한 번 저장소의 **Settings → Pages → Source → GitHub Actions**를 선택하세요. 배포 주소는 `https://wanttogames.github.io/gilnyang/`입니다. 서버·DB·외부 API 없이 실행되며 입력과 진행 데이터는 서버로 전송하지 않습니다. 개발 서버의 핫 리로드 통신은 개발 환경에서만 사용됩니다.
 
 단일 HTML 파일을 다시 만들려면 `npm run build` 후 `python scripts/export_standalone.py`를 실행하세요. 생성되는 `release/gilnyang-play.html`은 그래픽·글꼴·게임 코드가 들어 있는 단일 실행 파일입니다. 내려받아 Chrome/Edge 등으로 열면 플레이할 수 있습니다. 저장은 파일/사이트 주소와 브라우저별로 분리되므로 지속적인 플레이에는 같은 주소를 사용하세요. HTML 파일을 옮기거나 이름을 바꾸면 저장이 달라질 수 있습니다.
+
+## 0.3.6 · 몸 뒤에 이어지는 꼬리
+
+- 나비 꼬리 뿌리를 오른쪽 엉덩이 안쪽에 겹쳐 몸통 뒤에서 이어지게 했습니다. Container 오프셋 (17,19) → (8,14), 회전 중심을 실제 연결부로 옮겼습니다.
+- 꼬리는 넓은 끝 대신 가늘게 올라가는 곡선으로 정리했습니다. 18×22 파츠이며 몸/귀/발/삼색 패턴은 유지합니다.
+- 공유 nabiTailLayout에서 분리 꼬리 pivot과 본체/도감 합성 위치를 함께 관리합니다. 새 애니메이션 시스템은 없습니다.
+- 기본 ±3°, 단골 ±4°, 이야기 완료 ±5°, happy ±6°, PERFECT ±9°, sad ±0.3°. 걷기 ±2°, quiet 인사 ±0.5°로 작고 느리게 유지합니다.
+- 꼬리는 기존 bodyRoot 안에서 몸 뒤 순서 그대로입니다. blink/귀/감정 우선순위/식사/입퇴장/cleanup 로직과 SaveData는 유지합니다.
 
 ## 0.3.5 · 골목 친구들의 다섯 얼굴
 

@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { nabiTailLayout } from './CharacterArt';
 import type { Quality } from '../types/Recipe';
 import type { StoryLine, StoryEmotion } from '../types/CharacterStory';
 
@@ -29,7 +30,9 @@ export class NabiView extends Phaser.GameObjects.Container {
         super(scene, x, y);
         this.setName('nabi-view');
         this.bodyRoot = scene.add.container(0, 0).setName('nabi-body-root');
-        this.tail = scene.add.image(17, 19, 'nabi-tail').setOrigin(.5, 1).setName('nabi-tail');
+        const tail = nabiTailLayout;
+        this.tail = scene.add.image(tail.anchorX - 24, tail.anchorY - 24, 'nabi-tail')
+            .setOrigin(tail.pivotX / tail.width, tail.pivotY / tail.height).setName('nabi-tail');
         this.bodyImage = scene.add.image(0, 0, 'nabi-body').setName('nabi-body');
         this.ears = [scene.add.image(-9.5, -5, 'nabi-ear'), scene.add.image(9.5, -5, 'nabi-ear-right')];
         this.ears.forEach((ear, i) => ear.setOrigin(.5, 1).setName('nabi-ear-' + i));
@@ -66,9 +69,9 @@ export class NabiView extends Phaser.GameObjects.Container {
     private applyPose() {
         if (!this.started || this.cleaned) return;
         this.stop(this.tailTween); this.stop(this.breathTween);
-        const mood = this.mood, relaxed = this.stage >= 6 ? 12 : this.intimacy >= 10 || this.stage >= 2 ? 8 : 5;
-        const range = mood === 'sad' ? .6 : mood === 'shy' ? 3 : mood === 'veryHappy' ? 19 : mood === 'happy' ? 12 : mood === 'smile' ? 14 : relaxed;
-        const duration = mood === 'sad' ? 3000 : mood === 'veryHappy' ? 260 : mood === 'happy' ? 650 : 1800;
+        const mood = this.mood, relaxed = this.stage >= 6 ? 5 : this.intimacy >= 10 || this.stage >= 2 ? 4 : 3;
+        const range = mood === 'sad' ? .3 : mood === 'shy' ? 2 : mood === 'veryHappy' ? 9 : mood === 'happy' ? 6 : mood === 'smile' ? 6 : relaxed;
+        const duration = mood === 'sad' ? 3000 : mood === 'veryHappy' ? 420 : mood === 'happy' ? 900 : 1800;
         this.tail.setAngle(-range);
         this.tailTween = this.animate({ targets: this.tail, angle: range, duration, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
         this.bodyRoot.setY(mood === 'sad' ? 1 : 0).setAngle(mood === 'sad' ? -3 : mood === 'shy' ? -2 : 0);
@@ -87,15 +90,15 @@ export class NabiView extends Phaser.GameObjects.Container {
         this.started = false; this.eating = false; this.blinking = false;
         this.storyEmotion = undefined; this.foodMood = undefined; this.affection = false;
         this.bodyRoot.setPosition(0, 0).setAngle(0); this.ears.forEach(ear => ear.setAngle(0)); this.face();
-        this.tail.setAngle(-3);
-        this.tailTween = this.animate({ targets: this.tail, angle: 3, duration: 450, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+        this.tail.setAngle(-2);
+        this.tailTween = this.animate({ targets: this.tail, angle: 2, duration: 750, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     }
     farewell(familiar: boolean, friend: boolean, quiet: boolean, sparkle = true) {
         if (this.cleaned) return;
         this.stop(this.tailTween);
-        const range = quiet ? 3 : friend ? 12 : familiar ? 8 : 3;
+        const range = quiet ? .5 : friend ? 6 : familiar ? 4 : 2;
         this.tail.setAngle(-range);
-        this.tailTween = this.animate({ targets: this.tail, angle: range, duration: 650, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+        this.tailTween = this.animate({ targets: this.tail, angle: range, duration: 1000, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
         if (familiar && !quiet) this.perkEars();
         this.bodyImage.setTexture(friend && !quiet ? 'nabi-body-blink' : 'nabi-body');
         if (friend && !quiet && sparkle) this.sparkles(1);

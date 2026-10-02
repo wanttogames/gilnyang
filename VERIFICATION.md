@@ -1,3 +1,39 @@
+# 0.3.6 검증 결과 · 몸 뒤에 이어지는 꼬리
+
+## 원인 및 최소 수정
+
+기존 나비는 NabiView → bodyRoot → tail, bodyImage, ears 순서의 분리 Container였습니다. 꼬리 레이어는 이미 몸 뒤여서 depth 문제는 없었습니다. 그러나 꼬리 오프셋 (17,19), origin (.5,1), 8×24 텍스처였으며 몸통 오른쪽 끝 x=34와 꼬리 뿌리 x=39~44 사이가 떨어져 있었습니다. 넓은 아래 끝을 중심으로 최대 ±19°로 회전해 작은 화면에서 떨어진 손/앞발처럼 읽힐 수 있었습니다.
+
+나비 body/귀/눈/얼굴/발은 그대로 유지하고 tail 파츠 및 연결 좌표만 수정했습니다. 소스 변경은 src/game/CharacterArt.ts, src/game/NabiView.ts, src/scenes/BootScene.ts 세 파일입니다. 버전/문서 변경은 package.json, package-lock.json, README.md, CHANGELOG.md, VERIFICATION.md입니다.
+
+## 꼬리 연결과 움직임
+
+- 파츠 18×22, 실제 뿌리 pivot (3,13), origin (3/18,13/22).
+- 48×48 본체 기준 anchor (32,38), Container 오프셋 (8,14). 뿌리가 오른쪽 엉덩이 안쪽에 겹치며 꼬리는 몸 뒤에서 곡선을 따라 옆으로 나왔다가 가늘게 올라갑니다.
+- 뿌리는 주황, 굽은 부분 크림, 가는 끝은 검정. 기존 삼색 패턴 유지. 넓은 아래 끝을 흔드는 형태를 제거했습니다.
+- tail/bodyImage는 같은 bodyRoot의 자식이라 몸의 호흡/식사/슬픔 tilt/걷기에 함께 움직입니다. 기존 body 뒤 순서 유지, 별도 depth/timer/감정 시스템 없음.
+- nabiTailLayout에서 본체/도감 합성 오프셋, 실제 Image pivot/anchor, Boot 텍스처 크기를 공유합니다. 정적 portrait도 같은 연결부로 자동 반영합니다.
+- 기본 idle ±3°, 단골 ±4°, 완료 후 ±5°, shy ±2°, happy/smile ±6°, PERFECT ±9°, sad ±0.3°. happy 왕복 편도 900ms, PERFECT 420ms, idle 1800ms, sad 3000ms.
+- 걷기 ±2°/750ms, quiet 인사 ±0.5°, 친구 인사 ±6°/1000ms. 기존 반응 지속 시간/idle 복귀/스토리 우선순위/tween cleanup 유지.
+
+## 브라우저·회귀 검증
+
+Headless Chromium 153: PC 마우스 720px, 모바일 터치 320/390px 에뮬레이션. 실물 스마트폰 테스트는 하지 않았습니다.
+
+- 실제 생성 body/tail 텍스처의 alpha mask로 -9°부터 +9°까지 1° 간격 검증. 모든 각도에서 뿌리/몸이 최소 25픽셀 겹쳤으며 회전 중 연결이 끊어지지 않음.
+- 실제 tail Image의 anchor/origin, bodyRoot 내 몸 뒤 순서 검증. 나비 body/normal/blink 및 다른 4명 디자인 데이터 이전과 동일.
+- idle/happy/PERFECT/sad/완료 후/walk/farewell 각 상태의 실제 tween 범위와 꼬리 tween 1개 유지 검증. 320px에서 각 상태 최소/최대 각도 screenshots 확인, 390px 실제 주문 화면 및 48/32px 본체/도감 이미지 확인.
+- 20회 스토리 quiet → 종료 → PERFECT 전환에서 꼬리 tween 중첩 없음. cleanup 후 timer/tween/effect 모두 0, 브라우저 오류 없음.
+- 첫 밤 실제 UI: 나비 이야기 새로고침 복원, 주먹밥/어묵/우유 요리, 음식 제공, 골드/친밀도, 다섯 손님, 영업 종료/다음 밤 통과.
+- NORMAL/GOOD/PERFECT 식사와 보상 1회 지급/저장 복원, 나비 기존 하트/반짝임, quiet 스토리 우선순위, 비/날씨 전환/환경 idle, Scene 재시작 cleanup 통과.
+- 입장/착석 전 주문 차단, 나비 stage 1/6 idle·퇴장, 친밀도별 인사, 화면 밖 cleanup/다음 손님 공백, 입장·퇴장 중 새로고침 및 모바일 모달 터치 통과.
+- npm run test:story: v1/v2 저장 호환, 방문/밤/친밀도 조건, 대화 커서 저장/복원, 완료/중복 방지, 다른 손님 해금 통과.
+- npm run build: TypeScript/Vite 성공. 기존 Phaser 번들 크기 경고만 있음.
+
+SaveData, 고객 데이터/ID, 스토리/대화, 주문/요리/골드/친밀도/레시피/날씨/환경/방문 흐름 로직 변경 없음.
+
+---
+
 # 0.3.5 검증 결과 · 골목 친구들의 다섯 얼굴
 
 ## 기존 구조 및 최소 변경

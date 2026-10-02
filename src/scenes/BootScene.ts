@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { characterPixels, drawPixels, hasCharacterArt, nabiEar, nabiTail } from '../game/CharacterArt';
+import { characterPixels, drawPixels, hasCharacterArt, nabiEar, nabiTail, nabiTailLayout } from '../game/CharacterArt';
 import { customers } from '../data/customers';
 export class BootScene extends Phaser.Scene {
     constructor() { super('Boot'); }
@@ -64,7 +64,7 @@ export class BootScene extends Phaser.Scene {
         }
         const tail = this.make.graphics({ x: 0, y: 0 });
         drawPixels(tail, nabiTail);
-        tail.generateTexture('nabi-tail', 8, 24);
+        tail.generateTexture('nabi-tail', nabiTailLayout.width, nabiTailLayout.height);
         tail.destroy();
         const heart = this.make.graphics({ x: 0, y: 0 });
         heart.fillStyle(0xce8e83).fillRect(1, 0, 3, 2).fillRect(6, 0, 3, 2).fillRect(0, 2, 10, 3).fillRect(1, 5, 8, 2).fillRect(3, 7, 4, 2).fillRect(4, 9, 2, 1);
