@@ -1,4 +1,4 @@
-Noto Sans KR subset (alley-sans.woff)
+Noto Sans KR subsets (alley-sans.woff: 400; alley-sans-bold.woff: 700)
 (c) 2014-2021 Adobe (http://www.adobe.com/), with Reserved Font Name 'Source'.
 This font has been subset for the current game text and is distributed under the SIL Open Font License, Version 1.1.
 

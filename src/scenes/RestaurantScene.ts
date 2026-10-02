@@ -224,7 +224,9 @@ export class RestaurantScene extends Phaser.Scene {
         const signBoard = this.add.graphics();
         signBoard.fillStyle(0x503b38).fillRect(-92, -28, 184, 59);
         signBoard.fillStyle(0xe7cda5).fillRect(-86, -22, 172, 47);
-        this.stallSign = this.add.text(0, 0, '길냥이 식당', { fontFamily: 'Alley Sans, sans-serif', fontSize: '25px', color: '#654439', fontStyle: 'bold' }).setOrigin(0.5);
+        this.stallSign = this.add.text(0, 0, '길냥이 식당', { fontFamily: 'Alley Sans, sans-serif', fontSize: '26px', color: '#654439', fontStyle: 'bold', resolution: 3 }).setOrigin(0.5);
+        // Keep pixel sprites crisp; only the Korean text texture uses smooth sampling.
+        this.stallSign.texture.setFilter(Phaser.Textures.FilterMode.LINEAR);
         sign.add([signBoard, this.stallSign]);
         // rear shelving and ingredients
         r(154, 539, 406, 9, 0x916548);
@@ -257,7 +259,8 @@ export class RestaurantScene extends Phaser.Scene {
         r(199, 574, 15, 8, 0x56725a);
         r(249, 582, 34, 16, 0xa85e4d);
         r(252, 580, 28, 4, 0xddad83);
-        this.add.text(363, 657, '따뜻한 한 끼, 쉬어 가는 밤', { fontFamily: 'Alley Sans, sans-serif', fontSize: '18px', color: '#f4d6a5' }).setOrigin(.5);
+        const stallCaption = this.add.text(363, 657, '따뜻한 한 끼, 쉬어 가는 밤', { fontFamily: 'Alley Sans, sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#f4d6a5', resolution: 3 }).setOrigin(.5).setName('stall-caption');
+        stallCaption.texture.setFilter(Phaser.Textures.FilterMode.LINEAR);
         // stool / table
         for (const x of [210, 490]) {
             r(x, 754, 9, 63, 0x6d4b3f);
@@ -288,8 +291,10 @@ export class RestaurantScene extends Phaser.Scene {
     decorations() {
         if (this.save.upgrades.lamp)
             this.lanterns.forEach(l => l.setFillStyle(0xffd69a));
-        if (this.save.upgrades.sign)
-            this.stallSign.setText('길냥이 식당 · 夜');
+        if (this.save.upgrades.sign) {
+            this.stallSign.setFontSize(22).setText('길냥이 식당 · 夜');
+            this.stallSign.texture.setFilter(Phaser.Textures.FilterMode.LINEAR);
+        }
         if (this.save.upgrades.chair) {
             this.add.rectangle(240, 742, 58, 8, 0xb16f66);
             this.add.rectangle(520, 742, 58, 8, 0xb16f66);
