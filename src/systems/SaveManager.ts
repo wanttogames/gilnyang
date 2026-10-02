@@ -10,7 +10,7 @@ import { WeatherManager } from './WeatherManager';
 import { RecipeManager } from './RecipeManager';
 export const SAVE_KEY = 'alley-cat-diner-v1';
 export const emptyReport = (): NightReport => ({ served: 0, gold: 0, perfect: 0, intimacy: {}, discoveries: [] });
-export function newSave(): SaveData { return { version: 2, completedAlleyEvents: [], recentAlleyEventIds: [], gold: 0, level: 1, night: 1, weather: 'clear', customers: Object.fromEntries(customers.map(c => [c.id, { intimacy: 0, visitCount: 0, storyStage: 0, unlocked: false, preferenceFound: false, characterStory: CharacterStoryManager.restore(c.id, undefined, 0) }])), unlockedRecipes: ['rice', 'oden', 'milk'], pendingRecipeUnlocks: [], upgrades: {}, settings: { sound: true }, activeNight: null }; }
+export function newSave(): SaveData { return { version: 2, completedAlleyEvents: [], recentAlleyEventIds: [], gold: 0, level: 1, night: 1, prologueSeen: false, weather: 'clear', customers: Object.fromEntries(customers.map(c => [c.id, { intimacy: 0, visitCount: 0, storyStage: 0, unlocked: false, preferenceFound: false, characterStory: CharacterStoryManager.restore(c.id, undefined, 0) }])), unlockedRecipes: ['rice', 'oden', 'milk'], pendingRecipeUnlocks: [], upgrades: {}, settings: { sound: true }, activeNight: null }; }
 export class SaveManager {
     /** Remove only this game's save slot. */
     static reset(): void {
@@ -32,6 +32,7 @@ export class SaveManager {
             }
             base.gold = s.gold;
             base.night = s.night;
+            base.prologueSeen = typeof s.prologueSeen === 'boolean' ? s.prologueSeen : s.night > 1;
             base.level = Math.max(1, Math.floor(s.level || 1));
             base.upgrades = Object.fromEntries(['lamp', 'chair', 'pot', 'sign'].map(id => [id, s.upgrades?.[id] === 1 ? 1 : 0]));
             base.settings.sound = s.settings?.sound !== false;

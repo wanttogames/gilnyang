@@ -14,6 +14,8 @@ export interface SaveData {
     gold: number;
     level: number;
     night: number;
+    /** Set after the new-player opening sequence; absent in older saves. */
+    prologueSeen?: boolean;
     weather: Weather;
     customers: Record<string, CustomerProgress>;
     unlockedRecipes: string[];

@@ -95,3 +95,16 @@
 .dig-soil{width:86px;height:40px;background:#9b7858;clip-path:polygon(0 100%,0 66%,15% 66%,15% 36%,33% 36%,33% 12%,66% 12%,66% 36%,85% 36%,85% 66%,100% 66%,100% 100%);box-shadow:inset 0 -10px #77563e}
 .dig-working .dig-soil{animation:dig-soil .45s ease-in-out 4}.dig-hint{font-size:18px;line-height:1.45;margin-top:12px;color:#8c7159}
 @keyframes dig-soil{50%{transform:translateY(-3px) rotate(-2deg)}}
+
+/* The first-night opening keeps the moving street visible while the caption stays readable. */
+#interface.prologue-active #hud,
+#interface.prologue-active #nav,
+#interface.prologue-active #caption,
+#interface.prologue-active #weather-badge{visibility:hidden}
+#panel.prologue-panel{top:895px;height:270px;padding:24px 28px;display:flex;align-items:center}
+.prologue-card{width:100%;text-align:center}
+.prologue-card .eyebrow{font-size:16px;letter-spacing:2px;color:#a17c5d}
+.prologue-line{min-height:64px;display:flex;align-items:center;justify-content:center;margin:12px 0 14px;font-size:25px;line-height:1.5;color:#55483d}
+.prologue-skip{min-height:54px;border:1px solid #cbb494;background:#e7d7bb;color:#80664e;border-radius:7px;padding:10px 20px;font-size:17px}
+.prologue-skip span{margin-left:8px}
+@media(prefers-reduced-motion:reduce){.prologue-skip{transition:none}}

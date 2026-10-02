@@ -1,4 +1,5 @@
 import { DongguView } from '../game/DongguView';
+import { OwnerPrologue } from '../game/OwnerPrologue';
 import { AlleyEventManager } from '../systems/AlleyEventManager';
 import { AlleyEventView } from '../game/AlleyEventView';
 import type { AlleyEvent } from '../types/AlleyEvent';
@@ -65,6 +66,7 @@ export class RestaurantScene extends Phaser.Scene {
     private ambientProgress = new Map<string, CustomerProgress>();
     private groupTimer?: Phaser.Time.TimerEvent;
     private introTimer?: Phaser.Time.TimerEvent;
+    private prologue?: OwnerPrologue;
     private progress(id: string): CustomerProgress {
         if (this.save.customers[id]) return this.save.customers[id];
         if (!this.ambientProgress.has(id)) this.ambientProgress.set(id, {intimacy:0,visitCount:0,storyStage:0,unlocked:true,preferenceFound:false});
@@ -113,6 +115,7 @@ export class RestaurantScene extends Phaser.Scene {
         window.addEventListener('pagehide', this.saveOnHide);
         this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
             this.alleyView?.cleanup();
+            this.prologue?.dispose();
             this.groupTimer?.remove(false); this.introTimer?.remove(false);
             for (const slot of this.activeGuests) {
                 slot.visit.cleanup();
@@ -324,7 +327,15 @@ export class RestaurantScene extends Phaser.Scene {
     welcome() { this.phase = 'closed'; $('caption').textContent = weatherDefinitions[this.save.weather].caption; panel(`<div class="eyebrow">A LITTLE RESTAURANT, A WARM NIGHT</div><h1>길냥이 식당</h1><p class="muted">${weatherDefinitions[this.save.weather].greeting}</p><button class="primary" id="start">${this.save.night === 1 ? '첫 밤의 문 열기' : '오늘 밤 영업 시작'} <span>→</span></button><div class="panel-foot">${icon('save')} 자동 저장 · 느긋하게 즐겨도 괜찮아요</div>`); on('start', () => { if (this.phase !== 'closed') return; audio.unlock(); audio.note(392, .25); const condition = rollNightCondition(this.save.weather);
             const queue = CustomerManager.queue(this.save, Math.random, condition);
             this.save.activeNight = { queue, report: emptyReport(), condition, pairStarts: CustomerManager.pairs(this.save, queue) };
-            SaveManager.save(this.save); this.nightIntro(); }); }
+            SaveManager.save(this.save);
+            if (this.save.night === 1 && !this.save.prologueSeen) {
+                this.phase = 'transition'; this.lockGuestInput(true);
+                this.save.prologueSeen = true; SaveManager.save(this.save);
+                const sign = this.children.getByName('restaurant-sign') ?? undefined;
+                const awning = this.children.getByName('restaurant-awning') ?? undefined;
+                this.prologue = new OwnerPrologue(this, $('interface'), this.chef, sign, awning, this.lanterns);
+                this.prologue.start(() => { this.prologue = undefined; this.nightIntro(); });
+            } else this.nightIntro(); }); }
     resumeNight() {
         const night = this.save.activeNight!;
         const previousId = night.queue[night.report.served - 1];
