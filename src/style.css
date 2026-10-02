@@ -60,3 +60,5 @@
 
 /* The book sheet covers scene badges while it is open. */
 #modal{z-index:10}
+
+.portrait.pixel-portrait{width:96px;height:96px;object-fit:contain;image-rendering:pixelated;background:none;box-shadow:none;margin:0 auto 0}

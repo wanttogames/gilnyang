@@ -1,9 +1,21 @@
 import Phaser from 'phaser';
+import { characterPixels, drawPixels, nabiEar, nabiTail } from '../game/CharacterArt';
 import { customers } from '../data/customers';
 export class BootScene extends Phaser.Scene {
     constructor() { super('Boot'); }
     create() {
         for (const c of [{ id: 'chef', color: 0xd6c6b6, accent: 0x918275, dog: false }, ...customers]) {
+            if (c.id === 'nabi' || c.id === 'dubu') {
+                for (const layer of c.id === 'nabi' ? ['', '-body'] : ['']) {
+                    for (const blink of [false, true]) {
+                        const g = this.make.graphics({ x: 0, y: 0 });
+                        drawPixels(g, characterPixels(c.id, blink, layer === '-body'));
+                        g.generateTexture(c.id + layer + (blink ? '-blink' : ''), 48, 48);
+                        g.destroy();
+                    }
+                }
+                continue;
+            }
             for (const layer of c.id === 'nabi' ? ['', '-body'] : ['']) {
                 for (const blink of [false, true]) {
                     const g = this.make.graphics({ x: 0, y: 0 });
@@ -44,15 +56,14 @@ export class BootScene extends Phaser.Scene {
                 }
             }
         }
-        const nabi = customers.find(c => c.id === 'nabi')!;
-        const ear = this.make.graphics({ x: 0, y: 0 });
-        ear.fillStyle(nabi.color).fillRect(0, 0, 11, 15);
-        ear.fillStyle(0xd38f89).fillRect(3, 3, 5, 8);
-        ear.generateTexture('nabi-ear', 11, 15);
-        ear.destroy();
+        for (const right of [false, true]) {
+            const ear = this.make.graphics({ x: 0, y: 0 });
+            drawPixels(ear, nabiEar(right));
+            ear.generateTexture(right ? 'nabi-ear-right' : 'nabi-ear', 11, 15);
+            ear.destroy();
+        }
         const tail = this.make.graphics({ x: 0, y: 0 });
-        tail.fillStyle(nabi.accent).fillRect(2, 2, 5, 20);
-        tail.fillStyle(nabi.color).fillRect(3, 0, 4, 6).fillRect(0, 5, 5, 14).fillRect(2, 17, 5, 7);
+        drawPixels(tail, nabiTail);
         tail.generateTexture('nabi-tail', 8, 24);
         tail.destroy();
         const heart = this.make.graphics({ x: 0, y: 0 });

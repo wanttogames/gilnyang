@@ -1,3 +1,28 @@
+# 0.3.4 검증 결과 · 삼색 무늬와 말린 꼬리
+
+## 기존 구조 및 수정 범위
+
+48×48 Phaser Graphics 생성 텍스처였으며 atlas/외부 sprite sheet는 없었습니다. 나비는 body/blink + 분리된 11×15 귀/8×24 꼬리를 갖는 NabiView Container, 두부는 normal/blink Image입니다. 기존 두부 귀는 늘어진 사각형, 나비는 치즈고양이 표기/단색 외형이었습니다.
+
+CharacterArt.ts 정수 사각형 데이터만 새로 분리했습니다. Phaser 텍스처와 기존 도감 이미지용 SVG가 같은 데이터를 사용합니다. 나비 표기/색만 요청에 맞춰 삼색으로 정리했습니다. 두부는 말린 꼬리, 선 귀, 크림 주둥이, 다부진 몸입니다. 일반/blink 눈 위치, 48×48 크기, 모든 texture key 및 나비 pivot 유지. 나비 오른쪽 귀는 검은색 전용 텍스처를 사용하며 timer/tween 코드는 변경하지 않습니다.
+
+소스 변경: src/game/CharacterArt.ts(신규), src/game/NabiView.ts(귀 텍스처 참조 한 곳), src/scenes/BootScene.ts, src/scenes/CustomerBookScene.ts, src/data/customers.ts(나비 종/색), src/style.css(두 도감 이미지 전용 규칙). 문서/버전: README.md, CHANGELOG.md, VERIFICATION.md, package.json, package-lock.json.
+
+## 확인 결과
+
+- Headless Chromium 153: PC 720px 마우스, 320/390px 모바일 터치 에뮬레이션.
+- 48px 및 32px 축소 디자인과 실제 모바일 게임/도감 화면 시각 확인. 삼색 패치/긴 꼬리, 두부 삼각 귀/말린 꼬리/크림 주둥이 구분. 두 도감 SVG 정상 로드, 미발견 실루엣 규칙 유지. 대화창은 기존에 초상화가 없으므로 새 UI를 추가하지 않음.
+- 첫 밤 실제 UI: 나비 첫 이야기 중 새로고침/복원 → 참치 주먹밥 PERFECT → 두부 어묵 PERFECT → 까망 어묵 NORMAL → 몽실 우유 → 콩이 주먹밥 → 정산/다음 밤 통과.
+- 나비 idle/눈/귀 및 두부 공통 blink/대기, 착석 전 주문 차단, 친밀도 0/10/25 퇴장, 나비 story stage 1/6 퇴장, 화면 밖 제거/다음 손님 공백 통과.
+- NORMAL/GOOD/PERFECT 식사 반응과 나비 친밀도 하트, 먹는 동안 보상 지연/1회 지급, 중복 serve 차단/저장 복원 통과.
+- 퇴장/입장 중 새로고침과 중복 보상 방지, 실제 이야기 결말 저장, 미완료 이야기 퇴장 차단, 완료 후 뒤돌아보기, 4회 Scene 재시작 및 timer/tween cleanup 통과.
+- npm run test:story: 기존 v1/v2 저장 호환, 방문/밤/친밀도 조건, 대화 커서 저장, 완료/중복 방지, 다른 손님 해금 통과.
+- 이전 BootScene과 PNG 픽셀 비교: 주인공/다른 손님 6명 및 blink, 음식 5종, 하트/반짝임 동일.
+- 기존 SaveData/스토리 데이터/요리/보상/날씨/환경/방문 로직 파일은 변경 없음. 모바일 실기기 측정은 하지 않았으며 터치/화면 검증은 에뮬레이션 기준.
+- npm run build: TypeScript/Vite 성공. 기존 Phaser 번들 크기 경고만 있음.
+
+---
+
 # 0.3.3 검증 결과 · 작은 발걸음, 또 만나요
 
 ## 구조와 범위

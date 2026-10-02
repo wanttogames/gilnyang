@@ -31,7 +31,7 @@ export class NabiView extends Phaser.GameObjects.Container {
         this.bodyRoot = scene.add.container(0, 0).setName('nabi-body-root');
         this.tail = scene.add.image(17, 19, 'nabi-tail').setOrigin(.5, 1).setName('nabi-tail');
         this.bodyImage = scene.add.image(0, 0, 'nabi-body').setName('nabi-body');
-        this.ears = [scene.add.image(-9.5, -5, 'nabi-ear'), scene.add.image(9.5, -5, 'nabi-ear')];
+        this.ears = [scene.add.image(-9.5, -5, 'nabi-ear'), scene.add.image(9.5, -5, 'nabi-ear-right')];
         this.ears.forEach((ear, i) => ear.setOrigin(.5, 1).setName('nabi-ear-' + i));
         this.bodyRoot.add([this.tail, this.bodyImage, ...this.ears]);
         this.add(this.bodyRoot);
