@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { customerRender, customerShadowWidth } from './CharacterArt';
 import { NabiView } from './NabiView';
 
 /** Owns only one guest's movement/waiting. Scene phase remains the single flow state. */
@@ -9,21 +10,29 @@ export class CustomerVisit {
     private timers = new Set<Phaser.Time.TimerEvent>();
     private animations = new Set<Phaser.Tweens.Tween>();
     private effects = new Set<Phaser.GameObjects.Image>();
+    private shadow: Phaser.GameObjects.Ellipse;
     private walkingTween?: Phaser.Tweens.Tween;
     private waiting = false;
     private cleaned = false;
     private departing = false;
     constructor(private scene: Phaser.Scene, private guest: Phaser.GameObjects.Image | NabiView,
         private dog: boolean, private canWait: () => boolean) {
+        const id = guest instanceof NabiView ? 'nabi' : guest.texture.key.replace('-blink', '');
+        this.shadow = scene.add.ellipse(0, 0, customerShadowWidth(id), 9, 0x101626, .28)
+            .setDepth(guest.depth - .1).setName('customer-ground-shadow');
+        this.syncShadow();
         scene.events.once(Phaser.Scenes.Events.SHUTDOWN, this.cleanup, this);
         guest.once(Phaser.GameObjects.Events.DESTROY, this.cleanup, this);
+    }
+    private syncShadow() {
+        this.shadow.setPosition(this.guest.x, this.guest.y + (customerRender.footY - customerRender.centre) * this.guest.scaleY);
     }
     private later(ms: number, action: () => void) {
         const timer = this.scene.time.delayedCall(ms, () => { this.timers.delete(timer); if (!this.cleaned && this.guest.active) action(); });
         this.timers.add(timer); return timer;
     }
     private animate(config: Phaser.Types.Tweens.TweenBuilderConfig, done?: () => void) {
-        const tween = this.scene.tweens.add({ ...config, onComplete: () => { this.animations.delete(tween); if (!this.cleaned && this.guest.active) done?.(); } });
+        const tween = this.scene.tweens.add({ ...config, onUpdate: () => this.syncShadow(), onComplete: () => { this.animations.delete(tween); if (!this.cleaned && this.guest.active) done?.(); } });
         this.animations.add(tween); return tween;
     }
     private stop(tween?: Phaser.Tweens.Tween) {
@@ -37,22 +46,22 @@ export class CustomerVisit {
         this.timers.clear(); this.animations.clear(); this.effects.clear();
     }
     private walk(x: number, y: number, duration: number, done: () => void) {
-        this.guest.setAngle(0).setScale(2.5);
+        this.guest.setAngle(0).setScale(customerRender.scale);
         if (this.guest instanceof NabiView) this.guest.walking();
         // Scale supplies small footsteps without competing with path x/y.
-        this.walkingTween = this.animate({ targets: this.guest, scaleY: 2.46, duration: 140, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+        this.walkingTween = this.animate({ targets: this.guest, scaleY: customerRender.scale - .04, duration: 140, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
         this.animate({ targets: this.guest, x, y, duration, ease: 'Sine.easeInOut' }, () => {
-            this.stop(this.walkingTween); this.guest.setScale(2.5); done();
+            this.stop(this.walkingTween); this.guest.setScale(customerRender.scale); done();
         });
     }
     enter(seating: () => void, seated: () => void, ready: () => void) {
         this.walk(CustomerVisit.approach.x, CustomerVisit.approach.y, 1150, () => {
             seating();
             this.animate({ targets: this.guest, angle: this.dog ? -2 : 1.5, duration: 120, yoyo: true });
-            this.later(270, () => this.animate({ targets: this.guest, ...CustomerVisit.seat, scaleY: 2.42, duration: 260, ease: 'Sine.easeOut' }, () => { seated(); this.later(240, ready); }));
+            this.later(270, () => this.animate({ targets: this.guest, ...CustomerVisit.seat, scaleY: customerRender.seatedScaleY, duration: 260, ease: 'Sine.easeOut' }, () => { seated(); this.later(240, ready); }));
         });
     }
-    restoreSeat() { this.guest.setPosition(CustomerVisit.seat.x, CustomerVisit.seat.y).setAngle(0).setScale(2.5, 2.42); }
+    restoreSeat() { this.guest.setPosition(CustomerVisit.seat.x, CustomerVisit.seat.y).setAngle(0).setScale(customerRender.scale, customerRender.seatedScaleY); this.syncShadow(); }
     wait() {
         if (this.cleaned || this.departing || this.waiting) return;
         this.waiting = true;
@@ -87,7 +96,7 @@ export class CustomerVisit {
         this.pauseWaiting(); this.clearActivity(); this.departing = true;
         if (this.guest instanceof NabiView) this.guest.walking();
         standing();
-        this.later(160, () => this.animate({ targets: this.guest, y: CustomerVisit.approach.y, scaleY: 2.5, duration: 260 }, () => {
+        this.later(160, () => this.animate({ targets: this.guest, y: CustomerVisit.approach.y, scaleY: customerRender.scale, duration: 260 }, () => {
             farewell();
             const familiar = intimacy >= 10, friend = intimacy >= 25;
             if (this.guest instanceof NabiView) this.guest.farewell(familiar, friend || completeStory, quiet);
@@ -115,6 +124,7 @@ export class CustomerVisit {
         if (this.cleaned) return;
         this.cleaned = true; this.waiting = false;
         this.clearActivity();
+        this.shadow.destroy();
         this.scene.events.off(Phaser.Scenes.Events.SHUTDOWN, this.cleanup, this);
         this.guest.off(Phaser.GameObjects.Events.DESTROY, this.cleanup, this);
     }

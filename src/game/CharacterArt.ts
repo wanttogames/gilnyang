@@ -1,3 +1,8 @@
+/** Shared 48px canvas: poses stay centre anchored; every paw ends at pixel 47. */
+export const customerRender = { size: 48, centre: 24, footY: 47, scale: 2.5, seatedScaleY: 2.42 } as const;
+export function customerShadowWidth(id: string): number {
+    return id === 'nabi' ? 46 : id === 'kkamang' ? 42 : id === 'mongsil' ? 64 : id === 'dubu' ? 58 : 52;
+}
 /** Integer pixel rectangles shared by Phaser textures and matching book portraits. */
 type Pixel = [number, number, number, number, number];
 const white = 0xf7edda, orange = 0xda9152, ink = 0x36333c, pink = 0xd59a93;

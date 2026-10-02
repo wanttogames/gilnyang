@@ -1,3 +1,4 @@
+import { customerRender } from '../game/CharacterArt';
 import { CustomerVisit } from '../game/CustomerVisit';
 import { RestaurantEnvironment } from '../game/RestaurantEnvironment';
 import { CustomerMeal } from '../game/CustomerMeal';
@@ -257,7 +258,7 @@ export class RestaurantScene extends Phaser.Scene {
         if (pending?.part === 'after' && previous && previous.visitCount >= pending.visit) {
             // Serving was already saved. Resume the dialogue without paying again.
             this.current = customerById(previousId);
-            this.guest = this.createGuest(previousId, 246, 733);
+            this.guest = this.createGuest(previousId, CustomerVisit.seat.x, CustomerVisit.seat.y);
             this.guestVisit = this.createVisit();
             this.guestVisit.restoreSeat();
             this.quietDeparture = CharacterStoryManager.pendingEvent(previousId, previous)?.after.some(line => line.emotion === 'quiet') ?? false;
@@ -364,7 +365,7 @@ export class RestaurantScene extends Phaser.Scene {
         }, c.name, line => this.storyExpression(line), () => {
             if (this.guest instanceof NabiView) this.guest.endStory(p.intimacy, p.characterStory?.stage ?? 0);
             else if (this.guest) {
-                this.guest.setTexture(c.id).setAngle(0).setScale(2.5).setY(733);
+                this.guest.setTexture(c.id).setAngle(0).setScale(customerRender.scale).setY(CustomerVisit.seat.y);
                 this.tweens.getTweensOf(this.guest).forEach(tween => tween.resume());
             }
             next();
@@ -377,8 +378,8 @@ export class RestaurantScene extends Phaser.Scene {
         const emotion = line.emotion ?? 'normal';
         this.guest.setTexture(this.current!.id + (emotion === 'smile' ? '-blink' : ''));
         this.guest.setAngle(emotion === 'quiet' ? -5 : emotion === 'shy' ? -3 : emotion === 'smile' ? 3 : 0);
-        this.guest.setScale(emotion === 'quiet' ? 2.44 : emotion === 'smile' ? 2.6 : 2.5);
-        this.guest.setY(emotion === 'quiet' ? 737 : 733);
+        this.guest.setScale(emotion === 'quiet' ? customerRender.scale - .06 : emotion === 'smile' ? customerRender.scale + .1 : customerRender.scale);
+        this.guest.setY(CustomerVisit.seat.y + (emotion === 'quiet' ? 4 : 0));
     }
     story(lines: string[]) {
         const c = this.current!;
@@ -396,7 +397,7 @@ export class RestaurantScene extends Phaser.Scene {
         };
         show();
     }
-    private createGuest(id: string, x: number, y: number) { return id === 'nabi' ? new NabiView(this, x, y) : this.add.image(x, y, id).setScale(2.5).setDepth(2); }
+    private createGuest(id: string, x: number, y: number) { return id === 'nabi' ? new NabiView(this, x, y) : this.add.image(x, y, id).setOrigin(.5, .5).setScale(customerRender.scale).setDepth(2); }
     private createVisit() { return new CustomerVisit(this, this.guest!, !!this.current!.dog, () => ['waiting', 'order', 'cooking', 'ready', 'reaction'].includes(this.phase)); }
     depart() {
         if (!this.guest?.active || ['standing', 'farewell', 'leaving', 'gap'].includes(this.phase)) return;

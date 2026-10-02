@@ -1,3 +1,42 @@
+# 0.3.7 검증 결과 · 발맞춘 골목 친구들
+
+## 분석 및 범위
+
+현재 콩이/까망/몽실은 이미 고등어태비/검은 고양이/포메라니안으로 리팩토링된 48×48 normal/blink Image입니다. 나비는 몸/귀/꼬리가 분리된 NabiView Container, 두부는 같은 48×48 Image입니다. atlas/외부 sprite sheet는 없습니다. 다섯 본체 모두 불투명 발 픽셀의 끝이 캔버스 y=47에 맞으며, origin은 본체 중심 (24,24), 표시 배율은 2.5입니다. 종류에 따라 높이/폭/무늬/꼬리 실루엣이 다르지만 발 끝은 같습니다. 별도 손님 그림자는 없었습니다.
+
+이번에는 이미 요청에 맞는 캐릭터 그림을 다시 그리지 않고 픽셀 그대로 유지했습니다. 수정된 나비 꼬리/뿌리/pivot/tween도 동일합니다. CharacterArt의 공통 customerRender에 size=48, centre=24, footY=47, scale=2.5, seatedScaleY=2.42를 명시하고 기존 렌더 코드에서 참조합니다. 식사·감정·나비 분리 파츠의 좌표 호환을 위해 중심 origin을 유지하며 공통 발 오프셋 23px로 바닥 기준을 계산합니다.
+
+소스 변경: src/game/CharacterArt.ts, src/game/CustomerVisit.ts, src/game/NabiView.ts, src/scenes/RestaurantScene.ts. 버전/문서 변경: package.json, package-lock.json, README.md, CHANGELOG.md, VERIFICATION.md.
+
+## 배치 및 그림자
+
+- 기존 좌표/템포 유지: 입장 (-65,743), 자리 앞 (224,729), 착석 (246,733). 재로드/스토리 복귀 위치는 CustomerVisit.seat 참조로 통일.
+- 공통 바닥 기준은 guest.y + 23 * guest.scaleY. 자리 앞 786.5px, 착석 788.66px이며 기존 자리 깊이/앉는 연출을 유지합니다. 캐릭터별 임의 seatOffset은 필요하지 않았습니다.
+- 작은 바닥 ellipse 1개를 손님 뒤에 추가. alpha=.28, 높이 9px, 폭 나비46/까망42/콩이52/두부58/몽실64px. 중심은 손님 x, y는 발 끝.
+- CustomerVisit이 생성·소유하며 기존 tween onUpdate에서 이동/착석/서기/대기 그림자를 갱신합니다. 음식 반응 때 그림자는 바닥에 남습니다. 별도 Scene update loop/timer/이동·감정 시스템 없음.
+- 퇴장/destroy/Scene shutdown에서 그림자 제거. 기존 애니메이션 및 tween/timer/effect cleanup 그대로 유지.
+- 콩이 텍스트는 이전에 고등어태비로 정리되어 있으며 현재 삼색 표기는 나비에만 있습니다. 대사/스토리/캐릭터 ID/저장 데이터 변경 없음.
+- 본체/도감 SVG는 같은 픽셀 데이터여서 일치합니다. 기존 도감 UI/일반 미발견 실루엣 유지. 대화·주문창에는 캐릭터 초상화가 없어 새 UI를 추가하지 않음.
+
+## 검증
+
+Headless Chromium 153: PC 마우스 720px, 모바일 터치 320/390px 에뮬레이션 기준. 실물 스마트폰 테스트는 하지 않았습니다.
+
+- RestaurantScene에 5명과 공통 발 기준선을 비교 배치한 320/390px screenshot 검토. 무늬/눈/견종·체형 차이와 같은 발 위치/그림자 확인. 비교 UI는 테스트 브라우저에서만 생성, 제품 코드에 없음.
+- 이전 CharacterArt와 다섯 캐릭터 normal/blink 픽셀 배열 및 나비 꼬리 그림/레이아웃 동일. 모든 본체 foot edge 47px 확인.
+- 다섯 명 실제 방문을 각각 시작: 착석 시 공통 baseline 및 그림자 위치/1개 생성, 식사/보상, 퇴장 후 그림자 0개 검증.
+- 입장/착석/서기/인사/퇴장 중 반복 좌표 샘플링: 그림자는 x 오차 0.1px 미만, 발 계산 y 오차 1.1px 미만으로 기존 움직임에 붙어 있음.
+- 콩이/까망/몽실 v1 저장에서 친밀도24/방문4회 복원 → 기존 레시피 해금 팝업 → 착석/주문/식사/보상 → 기존 일반 이야기 → 퇴장/정산/다음 밤 → 새로고침 후 방문5회/storyStage1 유지 통과.
+- 실제 첫 밤: 나비 첫 이야기 새로고침 복원, 주먹밥/어묵/우유 요리, 다섯 손님, 음식/보상/정산/다음 밤 통과.
+- 나비 idle/눈/귀/꼬리와 stage1/6 퇴장, 두부 공통 대기/blink, 친밀도별 인사, 입장/착석 전 주문 차단, offscreen cleanup/다음 손님 공백, 모바일 모달 터치, Scene 종료 통과.
+- NORMAL/GOOD/PERFECT 식사/보상 1회 지급, 식사 중 새로고침/cleanup, quiet 이야기 우선순위, 비/환경/날씨 전환 및 Scene 재시작 통과.
+- npm run test:story: v1/v2 저장 호환, 기존 진행/커서/완료/중복 방지/손님 해금 통과.
+- npm run build: TypeScript/Vite 성공. 기존 Phaser 번들 크기 경고만 있음.
+
+SaveData/Customer ID/대사/스토리/요리/레시피/보상/날씨·환경 로직 변경 없음.
+
+---
+
 # 0.3.6 검증 결과 · 몸 뒤에 이어지는 꼬리
 
 ## 원인 및 최소 수정

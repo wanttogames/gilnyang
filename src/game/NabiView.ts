@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { nabiTailLayout } from './CharacterArt';
+import { customerRender, nabiTailLayout } from './CharacterArt';
 import type { Quality } from '../types/Recipe';
 import type { StoryLine, StoryEmotion } from '../types/CharacterStory';
 
@@ -31,7 +31,7 @@ export class NabiView extends Phaser.GameObjects.Container {
         this.setName('nabi-view');
         this.bodyRoot = scene.add.container(0, 0).setName('nabi-body-root');
         const tail = nabiTailLayout;
-        this.tail = scene.add.image(tail.anchorX - 24, tail.anchorY - 24, 'nabi-tail')
+        this.tail = scene.add.image(tail.anchorX - customerRender.centre, tail.anchorY - customerRender.centre, 'nabi-tail')
             .setOrigin(tail.pivotX / tail.width, tail.pivotY / tail.height).setName('nabi-tail');
         this.bodyImage = scene.add.image(0, 0, 'nabi-body').setName('nabi-body');
         this.ears = [scene.add.image(-9.5, -5, 'nabi-ear'), scene.add.image(9.5, -5, 'nabi-ear-right')];
@@ -39,7 +39,7 @@ export class NabiView extends Phaser.GameObjects.Container {
         this.bodyRoot.add([this.tail, this.bodyImage, ...this.ears]);
         this.add(this.bodyRoot);
         scene.add.existing(this);
-        this.setScale(2.5).setDepth(2);
+        this.setScale(customerRender.scale).setDepth(2);
         scene.events.once(Phaser.Scenes.Events.SHUTDOWN, this.cleanup, this);
         this.once(Phaser.GameObjects.Events.DESTROY, this.cleanup, this);
     }
