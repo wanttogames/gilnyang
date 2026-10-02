@@ -7,7 +7,7 @@ type FadableProp = Phaser.GameObjects.GameObject & {
     setAlpha(alpha: number): unknown;
     setVisible(visible: boolean): unknown;
 };
-type StoryPart = { line: string; animate: (finish: () => void) => void };
+type StoryPart = { line: string; duration: number; animate: () => void };
 const canFade = (object: Phaser.GameObjects.GameObject | null | undefined): object is FadableProp =>
     !!object && 'alpha' in object && 'visible' in object && 'setAlpha' in object && 'setVisible' in object;
 
@@ -58,10 +58,10 @@ export class OwnerPrologue {
 
     private onComplete = () => {};
     private readonly parts: StoryPart[] = [
-        { line: '밤이 되면, 골목 끝 작은 식당도 조용해졌어요.', animate: () => this.pauseLights() },
-        { line: '주인은 닫힌 문 앞에서 잠시 발길을 멈췄습니다.', animate: done => this.ownerArrives(done) },
-        { line: '다시 불을 켜고, 냄비를 걸었습니다.', animate: () => this.openTheDiner() },
-        { line: '배고픈 친구들이 쉬어 갈 곳을 만들고 싶었으니까요.', animate: done => this.firstFootsteps(done) }
+        { line: '밤이 되면, 골목 끝 작은 식당도 조용해졌어요.', duration: 2100, animate: () => this.pauseLights() },
+        { line: '주인은 닫힌 문 앞에서 잠시 발길을 멈췄습니다.', duration: 2200, animate: () => this.ownerArrives() },
+        { line: '다시 불을 켜고, 냄비를 걸었습니다.', duration: 2200, animate: () => this.openTheDiner() },
+        { line: '배고픈 친구들이 쉬어 갈 곳을 만들고 싶었으니까요.', duration: 2100, animate: () => this.firstFootsteps() }
     ];
 
     private play(index: number) {
@@ -70,7 +70,8 @@ export class OwnerPrologue {
         $('panel').classList.add('prologue-panel');
         panel(`<div class="prologue-card"><span class="eyebrow">길냥이 식당 · 첫 번째 밤</span><p class="prologue-line">${part.line}</p><button id="prologue-skip" class="prologue-skip">건너뛰기 <span aria-hidden="true">→</span></button></div>`);
         on('prologue-skip', () => this.finish());
-        part.animate(() => this.later(1750, () => index + 1 < this.parts.length ? this.play(index + 1) : this.finish()));
+        part.animate();
+        this.later(part.duration, () => index + 1 < this.parts.length ? this.play(index + 1) : this.finish());
     }
 
     private pauseLights() {
@@ -81,13 +82,13 @@ export class OwnerPrologue {
         }
     }
 
-    private ownerArrives(done: () => void) {
+    private ownerArrives() {
         this.actor = this.track(this.scene.add.image(645, 543, 'chef').setScale(2.5).setFlipX(true)
             .setDepth(12).setAlpha(0).setName('prologue-owner')) as Phaser.GameObjects.Image;
         this.actor.setVisible(true);
         this.tween({ targets: this.actor, x: 355, alpha: 1, duration: 1450, ease: 'Sine.easeOut' }, () => {
             if (!this.actor?.active || this.finished) return;
-            this.tween({ targets: this.actor, y: 539, duration: 200, yoyo: true, ease: 'Sine.easeInOut' }, done);
+            this.tween({ targets: this.actor, y: 539, duration: 200, yoyo: true, ease: 'Sine.easeInOut' });
         });
     }
 
@@ -113,7 +114,7 @@ export class OwnerPrologue {
         }
     }
 
-    private firstFootsteps(done: () => void) {
+    private firstFootsteps() {
         for (let i = 0; i < 4; i++) {
             const x = 634 - i * 38, y = 768 + (i % 2) * 13;
             const print = this.track(this.scene.add.container(x, y).setDepth(11).setAlpha(0).setName('prologue-pawprint')) as Phaser.GameObjects.Container;
@@ -126,8 +127,7 @@ export class OwnerPrologue {
             this.tween({ targets: print, x: x - 13, alpha: .5, duration: 380, delay: i * 180,
                 onComplete: () => this.tween({ targets: print, alpha: 0, duration: 300 }) });
         }
-        if (this.actor?.active) this.tween({ targets: this.actor, y: 537, duration: 230, yoyo: true, repeat: 1, ease: 'Sine.easeInOut' }, done);
-        else done();
+        if (this.actor?.active) this.tween({ targets: this.actor, y: 537, duration: 230, yoyo: true, repeat: 1, ease: 'Sine.easeInOut' });
     }
 
     private addFireflies() {
