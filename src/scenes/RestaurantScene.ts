@@ -1,3 +1,5 @@
+import { RestaurantEnvironment } from '../game/RestaurantEnvironment';
+import { CustomerMeal } from '../game/CustomerMeal';
 import { NabiView } from '../game/NabiView';
 import { customerById } from '../data/customers';
 import { CharacterStoryManager } from '../systems/CharacterStoryManager';
@@ -31,11 +33,16 @@ export class RestaurantScene extends Phaser.Scene {
     phase = 'closed';
     current?: Customer;
     private currentRecipe?: Recipe;
+    private environment!: RestaurantEnvironment;
+    private customerMeal?: CustomerMeal;
+    private saveOnHide = () => SaveManager.save(this.save);
     private weatherView!: WeatherView;
     private lanterns: Phaser.GameObjects.Rectangle[] = [];
     private stallSign!: Phaser.GameObjects.Text;
     constructor() { super('Restaurant'); }
     create() {
+        this.lanterns = [];
+        this.customerMeal = undefined;
         this.save = SaveManager.load();
         audio.enabled = this.save.settings.sound;
         this.drawStreet();
@@ -46,7 +53,7 @@ export class RestaurantScene extends Phaser.Scene {
         this.nav();
         this.time.addEvent({ delay: 3500, loop: true, callback: () => {
                 [this.chef, this.guest].forEach(s => {
-                    if (!s || s instanceof NabiView || (s === this.guest && this.phase === 'character-story'))
+                    if (!s || s instanceof NabiView || (s === this.guest && ['character-story', 'eating'].includes(this.phase)))
                         return;
                     const key = s.texture.key.replace('-blink', '');
                     s.setTexture(key + '-blink');
@@ -59,11 +66,19 @@ export class RestaurantScene extends Phaser.Scene {
         this.welcome();
         this.showPendingRecipes(() => { if (this.save.activeNight)
             this.resumeNight(); });
-        window.addEventListener('pagehide', () => SaveManager.save(this.save));
+        window.addEventListener('pagehide', this.saveOnHide);
+        this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+            this.customerMeal?.cleanup();
+            this.environment.cleanup();
+            this.guest instanceof NabiView && this.guest.cleanup();
+            window.removeEventListener('pagehide', this.saveOnHide);
+            this.lockMealInput(false);
+        });
     }
     update(_time: number, delta: number) { this.weatherView?.update(delta); }
     refreshWeather() {
         this.weatherView.set(this.save.weather);
+        this.environment.setWeather(this.save.weather);
         audio.setWeather(this.save.weather);
         $('caption').textContent = weatherDefinitions[this.save.weather].caption;
         document.getElementById('weather-badge')?.remove();
@@ -145,17 +160,21 @@ export class RestaurantScene extends Phaser.Scene {
         r(133, 363, 451, 28, 0x824d46);
         r(150, 348, 417, 15, 0xac6354);
         r(173, 333, 372, 15, 0x824d46);
+        const awning = this.add.graphics({ x: 360, y: 406 }).setName('restaurant-awning');
         for (let i = 0; i < 10; i++) {
-            r(125 + i * 47, 406, 47, 44, i % 2 === 0 ? 0xc78267 : 0xe4b389);
-            r(125 + i * 47, 450, 47, 10, i % 2 === 0 ? 0xae695b : 0xd3a178);
+            awning.fillStyle(i % 2 === 0 ? 0xc78267 : 0xe4b389).fillRect(-235 + i * 47, 0, 47, 44);
+            awning.fillStyle(i % 2 === 0 ? 0xae695b : 0xd3a178).fillRect(-235 + i * 47, 44, 47, 10);
         }
         r(137, 460, 13, 237, 0x714e42);
         r(571, 460, 13, 237, 0x714e42);
         r(131, 460, 7, 237, 0xb48764);
         r(565, 460, 6, 237, 0xb48764);
-        r(270, 374, 184, 59, 0x503b38);
-        r(276, 380, 172, 47, 0xe7cda5);
-        this.stallSign = this.add.text(362, 402, '길냥이 식당', { fontFamily: 'Alley Sans, sans-serif', fontSize: '25px', color: '#654439', fontStyle: 'bold' }).setOrigin(0.5);
+        const sign = this.add.container(362, 402).setName('restaurant-sign');
+        const signBoard = this.add.graphics();
+        signBoard.fillStyle(0x503b38).fillRect(-92, -28, 184, 59);
+        signBoard.fillStyle(0xe7cda5).fillRect(-86, -22, 172, 47);
+        this.stallSign = this.add.text(0, 0, '길냥이 식당', { fontFamily: 'Alley Sans, sans-serif', fontSize: '25px', color: '#654439', fontStyle: 'bold' }).setOrigin(0.5);
+        sign.add([signBoard, this.stallSign]);
         // rear shelving and ingredients
         r(154, 539, 406, 9, 0x916548);
         r(167, 546, 7, 65, 0x735041);
@@ -211,17 +230,8 @@ export class RestaurantScene extends Phaser.Scene {
             r(x - 18, 472, 40, 5, 0x8c5145);
             r(x - 18, 514, 40, 6, 0x8c5145);
             r(x - 1, 478, 4, 30, 0xf7d69a);
-            this.tweens.add({ targets: l, alpha: .78, duration: 1900, yoyo: true, repeat: -1 });
         }
-        // steam, drifting motes
-        for (let i = 0; i < 5; i++) {
-            const s = this.add.rectangle(497 + i * 9, 557, 4, 7, 0xfbe5bf, .35);
-            this.tweens.add({ targets: s, y: 515, alpha: 0, duration: 1500 + i * 180, delay: i * 250, repeat: -1, onRepeat: () => { s.y = 565; s.alpha = .35; } });
-        }
-        for (let i = 0; i < 12; i++) {
-            const s = this.add.rectangle(160 + Math.random() * 410, 470 + Math.random() * 230, 3, 3, 0xffd697, .25);
-            this.tweens.add({ targets: s, y: s.y - 24, alpha: 0, duration: 2500 + Math.random() * 3000, yoyo: true, repeat: -1 });
-        }
+        this.environment = new RestaurantEnvironment(this, awning, sign, this.lanterns);
         this.decorations();
     }
     decorations() {
@@ -235,7 +245,7 @@ export class RestaurantScene extends Phaser.Scene {
         }
     }
     hud() { $('hud').innerHTML = `<div class="topline"><span class="mini-brand">골목의 작은 불빛</span><button id="sound" class="sound" aria-label="소리 ${this.save.settings.sound ? '끄기' : '켜기'}">${icon('sound')}<span>${this.save.settings.sound ? 'ON' : 'OFF'}</span></button></div><div class="stats"><div>${icon('moon')}<span><small>오늘의 밤</small><b>${this.save.night}<em>번째 밤</em></b></span></div><div>${icon('coin')}<span><small>보유 골드</small><b>${this.save.gold}<em>G</em></b></span></div><div>${icon('star')}<span><small>식당 레벨</small><b>${this.save.level}<em>LV</em></b></span></div></div>`; on('sound', () => { audio.unlock(); this.save.settings.sound = audio.toggle(); SaveManager.save(this.save); this.hud(); }); }
-    nav() { $('nav').innerHTML = `<button id="menu-nav">${icon('menu')}<span>메뉴</span></button><button id="guests-nav">${icon('heart')}<span>손님</span></button><button id="shop-nav">${icon('shop')}<span>가게</span></button><button id="book-nav">${icon('book')}<span>도감</span></button>`; on('menu-nav', () => this.menu()); on('guests-nav', () => CustomerBookScene.open(this.save)); on('book-nav', () => CustomerBookScene.open(this.save)); on('shop-nav', () => this.shop()); }
+    nav() { $('nav').innerHTML = `<button id="menu-nav">${icon('menu')}<span>메뉴</span></button><button id="guests-nav">${icon('heart')}<span>손님</span></button><button id="shop-nav">${icon('shop')}<span>가게</span></button><button id="book-nav">${icon('book')}<span>도감</span></button>`; on('menu-nav', () => { if (this.phase !== 'eating') this.menu(); }); on('guests-nav', () => { if (this.phase !== 'eating') CustomerBookScene.open(this.save); }); on('book-nav', () => { if (this.phase !== 'eating') CustomerBookScene.open(this.save); }); on('shop-nav', () => { if (this.phase !== 'eating') this.shop(); }); }
     welcome() { this.phase = 'closed'; $('caption').textContent = weatherDefinitions[this.save.weather].caption; panel(`<div class="eyebrow">A LITTLE RESTAURANT, A WARM NIGHT</div><h1>길냥이 식당</h1><p class="muted">${weatherDefinitions[this.save.weather].greeting}</p><button class="primary" id="start">${this.save.night === 1 ? '첫 밤의 문 열기' : '오늘 밤 영업 시작'} <span>→</span></button><div class="panel-foot">${icon('save')} 자동 저장 · 느긋하게 즐겨도 괜찮아요</div>`); on('start', () => { audio.unlock(); audio.note(392, .25); this.save.activeNight = { queue: CustomerManager.queue(this.save), report: emptyReport() }; SaveManager.save(this.save); this.nextGuest(); }); }
     resumeNight() {
         const night = this.save.activeNight!;
@@ -256,6 +266,7 @@ export class RestaurantScene extends Phaser.Scene {
             this.nextGuest();
     }
     nextGuest() {
+        if (this.phase === 'eating') return;
         if (this.save.activeNight!.report.served >= this.save.activeNight!.queue.length) {
             this.result();
             return;
@@ -281,26 +292,43 @@ export class RestaurantScene extends Phaser.Scene {
     }
     order() { this.phase = 'order'; const c = this.current!, r = this.currentRecipe = RecipeManager.order(c, this.save), p = this.save.customers[c.id]; panel(`<div class="eyebrow">${this.save.activeNight!.report.served + 1} / 5 · 손님이 기다려요</div><div class="order-row"><div><h2>${c.name} <small>${c.species}</small></h2><p class="quote">“${DialogueManager.order(c.id, this.save.weather, r, p)}”</p></div>${food(r.id)}</div><div class="order-bottom"><div><small>오늘의 주문</small><strong>${r.name}</strong></div><button class="primary" id="cook">요리 시작 ${icon('arrow')}</button></div>${p.preferenceFound ? `<p class="preference">기억해 주세요 · ${ingredients[c.favoriteIngredients[0]].name}${c.favoriteIngredients[0] === 'warm' ? '' : ' 넉넉하게'}</p>` : ''}`); on('cook', () => { this.phase = 'cooking'; audio.note(440); new CookingScene(r, !!this.save.upgrades.pot, (quality, extra) => this.ready(quality, extra)); }); }
     ready(q: Quality, extra: string) { this.phase = 'ready'; audio.success(); this.tweens.add({ targets: this.chef, angle: 5, duration: 140, yoyo: true, repeat: 3 }); panel(`<div class="eyebrow">정성을 담은 한 접시</div><div class="ready-row">${food(this.currentRecipe!.id)}<div><span class="quality q-${q === '완벽' ? 'perfect' : 'good'}">${q === '완벽' ? 'PERFECT · ' : ''}${q}</span><h2>${this.currentRecipe!.name}</h2><p class="muted">${extra ? ingredients[extra].name + '도 마음을 담아' : '따뜻할 때 전해 주세요.'}</p></div></div><button id="serve" class="primary">${this.current!.name}에게 음식 건네기 →</button>`); on('serve', () => this.serve(q, extra)); }
+    private lockMealInput(locked: boolean) {
+        $('nav').querySelectorAll<HTMLButtonElement>('button').forEach(button => button.disabled = locked);
+    }
     serve(q: Quality, extra: string) {
+        if (this.phase !== 'ready' || !this.guest?.active) return;
+        this.phase = 'eating';
+        this.lockMealInput(true);
+        const c = this.current!, p = this.save.customers[c.id];
+        const quiet = CharacterStoryManager.pendingEvent(c.id, p)?.after.some(line => line.emotion === 'quiet') ?? false;
+        const favorite = p.preferenceFound && extra === c.favoriteIngredients[0];
+        panel(`<div class="eyebrow">따뜻할 때, 천천히</div><h2>${c.name}의 한입</h2><p class="muted">${this.currentRecipe!.name} · 잠깐 쉬어 가요.</p><div class="waiting"><i></i><i></i><i></i></div>`);
+        this.customerMeal = new CustomerMeal(this, this.guest, this.currentRecipe!.id, q, quiet,
+            () => { if (this.guest instanceof NabiView) this.guest.taste(q, favorite, p.intimacy, p.characterStory?.stage ?? 0); },
+            () => { this.customerMeal = undefined; if (this.phase === 'eating') this.finishServing(q, extra, quiet); });
+    }
+    private finishServing(q: Quality, extra: string, quiet: boolean) {
         this.phase = 'reaction';
+        this.lockMealInput(false);
         const c = this.current!, reward = ProgressionManager.serve(this.save, c.id, q, extra);
         this.hud();
         audio.success();
         $('caption').textContent = '배부른 한 끼가, 다정한 기억이 됩니다.';
-        if (this.guest instanceof NabiView) {
+        if (this.guest instanceof NabiView && !quiet) {
             const p = this.save.customers[c.id];
-            this.guest.meal(q, reward.intimacy, reward.favorite, p.intimacy, p.characterStory?.stage ?? 0);
-        } else {
-            const plate = this.add.text(280, 700, '♥', { fontSize: '32px', color: '#eca19b' });
-            this.tweens.add({ targets: plate, y: 652, alpha: 0, duration: 1600, onComplete: () => plate.destroy() });
+            this.guest.affinity(reward.intimacy, p.intimacy, p.characterStory?.stage ?? 0);
         }
         panel(`<div class="eyebrow">잘 먹었습니다</div><h2>${c.name}의 작은 인사</h2><p class="quote">“${DialogueManager.reaction(c.id, this.save.weather, reward.favorite)}”</p><div class="rewards"><span>${icon('coin')} +${reward.gold} G</span><span>${icon('heart')} 친밀도 +${reward.intimacy}${reward.favorite ? ' · 취향 보너스' : ''}</span></div><button id="next" class="primary">${reward.stories.length || this.save.customers[c.id].characterStory?.pending?.part === 'after' ? '이야기 들어 주기' : this.save.activeNight!.report.served === 5 ? '오늘 밤 마무리' : '다음 손님 맞이하기'} →</button>`);
-        on('next', () => this.showPendingRecipes(() => {
-            if (reward.stories.length)
-                this.story(reward.stories);
-            else
-                this.playCharacterStory('after', () => this.depart());
-        }));
+        on('next', () => {
+            if (this.phase !== 'reaction') return;
+            this.phase = 'transition';
+            this.showPendingRecipes(() => {
+                if (reward.stories.length)
+                    this.story(reward.stories);
+                else
+                    this.playCharacterStory('after', () => this.depart());
+            });
+        });
     }
     playCharacterStory(part: StoryPart, next: () => void) {
         const c = this.current!, p = this.save.customers[c.id];

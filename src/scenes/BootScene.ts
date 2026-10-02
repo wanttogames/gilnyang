@@ -63,6 +63,23 @@ export class BootScene extends Phaser.Scene {
         spark.fillStyle(0xf3cf8d).fillRect(3, 0, 2, 8).fillRect(0, 3, 8, 2);
         spark.generateTexture('nabi-spark', 8, 8);
         spark.destroy();
+        // Tiny food textures, replaceable with artwork without changing serving logic.
+        for (const id of ['rice', 'oden', 'milk', 'ramen', 'bread']) {
+            const g = this.make.graphics({ x: 0, y: 0 });
+            const rect = (x: number, y: number, w: number, h: number, color: number) => { g.fillStyle(color).fillRect(x, y, w, h); };
+            if (id === 'rice') {
+                rect(7, 1, 6, 3, 0xf5e6c5); rect(4, 4, 12, 4, 0xf5e6c5); rect(2, 8, 16, 7, 0xf5e6c5); rect(7, 10, 6, 5, 0x496350);
+            } else if (id === 'milk') {
+                rect(4, 3, 11, 12, 0xe8d8b8); rect(6, 3, 7, 3, 0xf9edcf); rect(15, 6, 3, 6, 0xe8d8b8);
+            } else if (id === 'bread') {
+                rect(3, 5, 12, 7, 0xdca265); rect(1, 7, 3, 3, 0xdca265); rect(15, 3, 4, 11, 0xdca265); rect(5, 6, 2, 2, 0x775443);
+            } else {
+                rect(1, 7, 18, 3, 0xf0d9ad); rect(3, 10, 14, 5, 0xb87654); rect(3, 7, 14, 2, 0xc79454);
+                if (id === 'oden') { rect(4, 4, 4, 5, 0xe1b36c); rect(10, 3, 5, 5, 0xe6c68b); }
+                else { rect(5, 5, 10, 3, 0xefc988); rect(11, 4, 4, 4, 0xf2e1b7); rect(12, 5, 2, 2, 0xe3b452); }
+            }
+            g.generateTexture('meal-' + id, 20, 16); g.destroy();
+        }
         this.scene.start('Title');
     }
 }

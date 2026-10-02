@@ -20,6 +20,7 @@ export class NabiView extends Phaser.GameObjects.Container {
     private affection = false;
     private blinking = false;
     private started = false;
+    private eating = false;
     private cleaned = false;
     private intimacy = 0;
     private stage = 0;
@@ -73,8 +74,11 @@ export class NabiView extends Phaser.GameObjects.Container {
         this.bodyRoot.setY(mood === 'sad' ? 1 : 0).setAngle(mood === 'sad' ? -3 : mood === 'shy' ? -2 : 0);
         this.breathTween = this.animate({ targets: this.bodyRoot, y: mood === 'sad' ? .5 : -.6, duration: mood === 'sad' ? 2400 : 1700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
         this.ears.forEach((ear, i) => { this.stopTarget(ear); ear.setAngle(mood === 'sad' ? (i ? 9 : -9) : 0); });
+        if (this.eating) this.breathTween.pause();
         this.face();
     }
+    beginEating() { this.eating = true; this.breathTween?.pause(); }
+    endEating() { this.eating = false; this.breathTween?.resume(); }
     private scheduleBlink() {
         this.later(Phaser.Math.Between(2500, 5000), () => {
             this.blinking = true; this.face();
@@ -118,22 +122,28 @@ export class NabiView extends Phaser.GameObjects.Container {
         this.storyEmotion = undefined;
         this.settle(intimacy, stage);
     }
-    meal(quality: Quality, intimacyGain: number, favorite: boolean, intimacy: number, stage: number) {
+    taste(quality: Quality, favorite: boolean, intimacy: number, stage: number) {
         if (this.cleaned || this.storyEmotion) return;
         this.intimacy = intimacy; this.stage = stage;
-        this.cancel(this.reactionTimer); this.cancel(this.affectionTimer);
+        this.cancel(this.reactionTimer);
         this.clearEffects();
-        this.affection = intimacyGain > 0;
         this.foodMood = quality === '완벽' ? 'veryHappy' : quality === '맛있음' || favorite ? 'happy' : 'normal';
         this.applyPose();
         // Small head nod or 2px lift. Child motion never competes with entrance/exit.
         this.stop(this.breathTween);
         const perfect = quality === '완벽';
         this.breathTween = this.animate({ targets: this.bodyRoot, y: perfect ? -.8 : .6, angle: perfect ? -2 : 2, duration: 150, yoyo: true, repeat: 1 }, () => { this.bodyRoot.setAngle(0); });
-        if (quality !== '보통' || favorite) this.sparkles(perfect ? 3 : 2);
-        if (intimacyGain > 0) this.hearts(intimacyGain >= 3 ? 2 : 1);
+        if (quality !== '보통') this.sparkles(perfect ? 3 : 2);
         this.reactionTimer = this.later(perfect ? 1500 : this.foodMood === 'happy' ? 1300 : 500, () => { this.foodMood = undefined; this.applyPose(); });
-        this.affectionTimer = this.later(1800, () => { this.affection = false; if (!this.foodMood) this.applyPose(); });
+    }
+    affinity(intimacyGain: number, intimacy: number, stage: number) {
+        if (this.cleaned || this.storyEmotion || intimacyGain <= 0) return;
+        this.intimacy = intimacy; this.stage = stage;
+        this.cancel(this.affectionTimer);
+        this.affection = true;
+        this.hearts(intimacyGain >= 3 ? 2 : 1);
+        // Affection follows tasting without replaying the food's sparks or jump.
+        this.affectionTimer = this.later(1100, () => { this.affection = false; if (!this.foodMood) this.applyPose(); });
     }
     private effect(texture: string, x: number, y: number, duration: number) {
         if (this.effects.size >= 5 || this.mood === 'sad') return;

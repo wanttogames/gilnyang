@@ -1,3 +1,36 @@
+# 0.3.2 검증 결과 · 보글보글, 따뜻한 한입
+
+## 기존 구조와 수정
+
+RestaurantScene의 단일 Graphics 배경/등불 Rectangle/반복 김 tween에서 천막과 간판만 분리했습니다. 기존 WeatherView는 58개 rain/34개 snow 도형을 update로 이동하며 지붕 안을 숨깁니다. 이 시스템은 그대로 사용하고 RestaurantEnvironment의 짧은 TimerEvent/Tween 효과만 추가했습니다.
+
+기존 serve는 ProgressionManager.serve 직후 나비 meal/보상 UI를 표시했습니다. 현재 serve는 입력을 잠그고 CustomerMeal을 시작하며 2.35초 뒤 기존 ProgressionManager.serve를 호출합니다. 이후 대사/스토리/퇴장/정산 흐름은 유지합니다. NabiView의 음식 만족과 친밀도 표시를 taste/affinity로 분리해 보상 전에 하트가 뜨지 않도록 했습니다.
+
+수정: src/game/RestaurantEnvironment.ts(신규), src/game/CustomerMeal.ts(신규), src/game/NabiView.ts, src/scenes/BootScene.ts, src/scenes/RestaurantScene.ts, package.json, package-lock.json, README.md, CHANGELOG.md, VERIFICATION.md.
+
+## 브라우저 검증
+
+Headless Chromium 153, PC 720px 마우스 및 모바일 320/390px 터치 에뮬레이션:
+
+- 나비 NORMAL/GOOD/PERFECT, 두부 PERFECT, 까망 GOOD: 음식 놓기/축소/단계적 반응. 먹는 중 골드/친밀도 미변경, 반응 후 10/12/15G 및 1/2/3 친밀도 정확히 1회 지급.
+- 나비 맛보기 반짝임 0/2/3개. 실제 지급 후 하트 1/1/2개. 음식·접시·김 및 먹기 timer/tween 모두 종료 후 0.
+- 먹는 중 메뉴 disabled, 중복 serve/nextGuest 무시. 지급 후 재호출도 무시. 메뉴 복구.
+- 먹는 중 새로고침: 미지급 주문 재진입. 중간 shutdown: 지연 보상 취소, 각 객체 소유 timer/tween/effect 0.
+- 나비 STORY_5: PERFECT도 들뜬 반응/하트 없음, 보상 유지. 실제 quiet 대화와 재로딩 뒤 sad 상태/골드 유지.
+- 나비 기존 랜덤 blink/귀/꼬리/호흡 유지. 30번 날씨 변경 뒤 환경 timer 최대 4개, tween/effect 상한 유지. clear 전환 시 rain 효과 제거. Scene 재시작 후 이전 리소스 0.
+- 전체 첫 밤 실제 조작: 나비 intro 대화/새로고침 → 주먹밥 → 두부 어묵 PERFECT → 까망 어묵 NORMAL → 몽실 우유 → 콩이 주먹밥 → 정산 → 다음 밤. 요리 코드는 변경하지 않았습니다.
+- 새로고침 뒤 골드/방문/날짜 유지. 런타임 오류 없음.
+- 390px 비 날씨 8.5초 rAF 관측 약 60fps, 50ms 초과 프레임 0. 이는 데스크톱 소프트웨어 렌더러의 모바일 에뮬레이션 수치이며 실제 저사양 휴대폰 FPS를 보장하지 않습니다.
+
+## 빌드 및 보호된 기능
+
+- npm run test:story 통과: v1/v2 호환, 방문/친밀도/밤 조건, 대화 cursor, 분할 결말, 이벤트 재실행 방지, 기존 다른 손님 이야기.
+- npm run build 통과: TypeScript/Vite 오류 없음. 기존 Phaser 번들 500kB 경고는 남아 있습니다.
+- data/, systems/, types/, style.css 및 요리 Scene/WeatherView/CustomerBookScene은 이전 버전과 바이트 단위로 동일합니다. SaveData/LocalStorage 키/보상 계산식/스토리 내용/레시피 해금/날씨 결정 변경 없음.
+- 환경 최대 12개 및 공통 식사 최대 7개, 새 update loop/emitter/pooling 없음. Scene 종료 시 timer/tween/object와 pagehide listener 정리.
+
+---
+
 # 0.3.1 검증 결과 · 살랑살랑 나비
 
 ## 원래 렌더링/애니메이션 구조
