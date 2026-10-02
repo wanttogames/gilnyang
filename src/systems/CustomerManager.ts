@@ -35,9 +35,9 @@ export class CustomerManager {
         while (result.length < total) {
             if (priority && result.length === priorityDelay) { result.push(priority); history.push(priority); continue; }
             const eligible = available.filter(c => !due.some(d => d.id === c.id) && !result.includes(c.id));
-            // Guarantee a regular from the five principals, independently of random ambient choices.
-            const principal = eligible.filter(c => ['nabi','dubu','kkamang','mongsil','kong'].includes(c.id));
-            const main = (result.length === total - 1 && !result.some(id => ['nabi','dubu','kkamang','mongsil','kong'].includes(id)) || random() < .35) && eligible.length;
+            // Guarantee a regular from the principal cast, independently of random ambient choices.
+            const principal = eligible.filter(c => ['nabi','dubu','kkamang','mongsil','kong','donggu'].includes(c.id));
+            const main = (result.length === total - 1 && !result.some(id => ['nabi','dubu','kkamang','mongsil','kong','donggu'].includes(id)) || random() < .35) && eligible.length;
             let pool = main ? (principal.length ? principal : eligible) : ambientCustomers;
             const fresh = pool.filter(c => !history.slice(-3).includes(c.id));
             if (fresh.length) pool = fresh;

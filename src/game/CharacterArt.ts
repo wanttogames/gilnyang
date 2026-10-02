@@ -1,8 +1,9 @@
+import { dongguPixels } from './DongguArt';
 /** Shared 48px canvas: poses stay centre anchored; every paw ends at pixel 47. */
 export const customerRender = { size: 48, centre: 24, footY: 47, scale: 2.5, seatedScaleY: 2.42 } as const;
 export function customerShadowWidth(id: string): number {
     const widths: Record<string, number> = {
-        nabi: 46, kkamang: 42, mongsil: 64, dubu: 58,
+        nabi: 46, kkamang: 42, mongsil: 64, dubu: 58, donggu: 58,
         ambient_bamtol: 62, ambient_seol: 44, ambient_kkomi: 42,
         ambient_mungchi: 58, ambient_haru: 52, ambient_yeon: 48, ambient_boksil: 68,
     };
@@ -22,11 +23,12 @@ export const nabiTailLayout = { width: 18, height: 22, pivotX: 3, pivotY: 13, an
 export const nabiTail: Pixel[] = [[0,11,6,5,orange],[4,14,6,4,orange],[9,14,5,3,white],
     [12,10,4,6,white],[14,5,3,7,ink],[14,1,2,6,ink],[13,0,3,2,ink]];
 const move = (pixels: Pixel[], x: number, y: number): Pixel[] => pixels.map(([px,py,w,h,c]) => [px+x,py+y,w,h,c]);
-export type RefinedCharacterId = 'nabi' | 'dubu' | 'kong' | 'kkamang' | 'mongsil';
+export type RefinedCharacterId = 'nabi' | 'dubu' | 'kong' | 'kkamang' | 'mongsil' | 'donggu';
 export function hasCharacterArt(id: string): id is RefinedCharacterId {
-    return ['nabi', 'dubu', 'kong', 'kkamang', 'mongsil'].includes(id);
+    return ['nabi', 'dubu', 'kong', 'kkamang', 'mongsil', 'donggu'].includes(id);
 }
 export function characterPixels(id: RefinedCharacterId, blink = false, bodyOnly = false): Pixel[] {
+    if (id === 'donggu') return dongguPixels(blink);
     if (id === 'kong') {
         const fur = 0xa49b89, stripe = 0x55524e, light = 0xe1d5bb, shade = 0x837b6e;
         return [

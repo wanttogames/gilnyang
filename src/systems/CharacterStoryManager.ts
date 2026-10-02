@@ -1,11 +1,12 @@
 import { characterStories } from '../data/characterStories';
+import { dongguStory } from '../data/dongguStory';
 import type { CharacterStoryProgress } from '../types/CharacterStory';
 import type { Weather } from '../types/Weather';
 import type { CustomerProgress } from '../types/Customer';
 
 const emptyProgress = (): CharacterStoryProgress => ({ stage: 0, lastEventVisit: 0, lastEventNight: 0 });
 export class CharacterStoryManager {
-    static events(id: string) { return characterStories[id] ?? []; }
+    static events(id: string) { return id === 'donggu' ? dongguStory : characterStories[id] ?? []; }
     static progress(p: CustomerProgress) { return p.characterStory ??= emptyProgress(); }
     static complete(id: string, p: CustomerProgress) { const count = this.events(id).length; return count > 0 && (p.characterStory?.stage ?? 0) >= count; }
     static pendingEvent(id: string, p: CustomerProgress) { return this.events(id).find(e => e.id === p.characterStory?.pending?.eventId); }
