@@ -1,5 +1,6 @@
 import type { CharacterStoryProgress } from './CharacterStory';
 export interface Customer {
+    role?: 'main' | 'ambient';
     id: string;
     name: string;
     species: string;

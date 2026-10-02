@@ -1,3 +1,5 @@
+import { validNightCondition } from '../data/nightConditions';
+import { allCustomers } from '../data/customers';
 import { CharacterStoryManager } from './CharacterStoryManager';
 import type { SaveData, NightReport } from '../types/SaveData';
 import { customers } from '../data/customers';
@@ -30,10 +32,14 @@ export class SaveManager {
             base.weather = WeatherManager.valid(s.weather) ? s.weather : s.activeNight ? 'clear' : WeatherManager.roll(s.night);
             base.unlockedRecipes = [...new Set([...base.unlockedRecipes, ...(Array.isArray(s.unlockedRecipes) ? s.unlockedRecipes.filter((id: unknown) => recipes.some(r => r.id === id)) : [])])] as string[];
             base.pendingRecipeUnlocks = Array.isArray(s.pendingRecipeUnlocks) ? [...new Set(s.pendingRecipeUnlocks.filter((id: unknown) => typeof id === 'string' && base.unlockedRecipes.includes(id) && recipes.some(r => r.id === id && r.unlock)))] as string[] : [];
-            if (s.activeNight && Array.isArray(s.activeNight.queue) && s.activeNight.queue.length > 0 && s.activeNight.queue.every((id: unknown) => typeof id === 'string' && customers.some(c => c.id === id))) {
+            base.recentCustomers = Array.isArray(s.recentCustomers) ? s.recentCustomers.filter((id: unknown) => allCustomers.some(c => c.id === id)).slice(-3) : [];
+            if (s.activeNight && Array.isArray(s.activeNight.queue) && s.activeNight.queue.length > 0 && s.activeNight.queue.every((id: unknown) => typeof id === 'string' && allCustomers.some(c => c.id === id))) {
                 const r = s.activeNight.report;
                 if (r && Number.isInteger(r.served) && r.served >= 0 && r.served <= s.activeNight.queue.length && Number.isFinite(r.gold) && Number.isFinite(r.perfect) && r.intimacy && Array.isArray(r.discoveries))
-                    base.activeNight = { queue: s.activeNight.queue, report: r };
+                    base.activeNight = { queue: s.activeNight.queue, report: r,
+                        condition: validNightCondition(s.activeNight.condition) ? s.activeNight.condition : 'ordinary',
+                        pairStarts: Array.isArray(s.activeNight.pairStarts) ? [...new Set<number>(s.activeNight.pairStarts.filter((n: unknown) => typeof n === 'number' && Number.isInteger(n) && n >= r.served && n + 1 < s.activeNight.queue.length))].filter((n, i, all) => !all.includes(n - 1)) : [],
+                    };
             }
             RecipeManager.discover(base);
             return base;

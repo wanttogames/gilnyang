@@ -1,3 +1,5 @@
+import { nightConditions, rollNightCondition } from '../data/nightConditions';
+import type { CustomerProgress } from '../types/Customer';
 import { customerRender } from '../game/CharacterArt';
 import { CustomerVisit } from '../game/CustomerVisit';
 import { RestaurantEnvironment } from '../game/RestaurantEnvironment';
@@ -30,6 +32,16 @@ import { $, panel, on, toast, icon, modal, closeModal, food } from '../ui/UI';
 import type { SaveData } from '../types/SaveData';
 import type { Customer } from '../types/Customer';
 import type { Quality } from '../types/Recipe';
+type GuestView = Phaser.GameObjects.Image | NabiView | DubuView | KkamangView;
+type CustomerState = 'entering' | 'seating' | 'waiting' | 'ordering' | 'cooking' | 'eating' | 'reacting' | 'leaving';
+interface ActiveCustomer {
+    customer: Customer;
+    guest: GuestView;
+    visit: CustomerVisit;
+    seat: { x: number; y: number };
+    state: CustomerState;
+    recipe: Recipe;
+}
 export class RestaurantScene extends Phaser.Scene {
     save!: SaveData;
     guest?: Phaser.GameObjects.Image | NabiView | DubuView | KkamangView;
@@ -42,6 +54,23 @@ export class RestaurantScene extends Phaser.Scene {
     private guestVisit?: CustomerVisit;
     private guestGap?: Phaser.Time.TimerEvent;
     private quietDeparture = false;
+    private activeGuests: ActiveCustomer[] = [];
+    private ambientProgress = new Map<string, CustomerProgress>();
+    private groupTimer?: Phaser.Time.TimerEvent;
+    private introTimer?: Phaser.Time.TimerEvent;
+    private progress(id: string): CustomerProgress {
+        if (this.save.customers[id]) return this.save.customers[id];
+        if (!this.ambientProgress.has(id)) this.ambientProgress.set(id, {intimacy:0,visitCount:0,storyStage:0,unlocked:true,preferenceFound:false});
+        return this.ambientProgress.get(id)!;
+    }
+    private selectGuest(slot: ActiveCustomer) {
+        this.current = slot.customer; this.guest = slot.guest; this.guestVisit = slot.visit;
+        this.currentRecipe = slot.recipe;
+    }
+    private setCustomerState(state: CustomerState) {
+        const slot = this.activeGuests.find(a => a.guest === this.guest);
+        if (slot) slot.state = state;
+    }
     private saveOnHide = () => SaveManager.save(this.save);
     private weatherView!: WeatherView;
     private lanterns: Phaser.GameObjects.Rectangle[] = [];
@@ -49,6 +78,9 @@ export class RestaurantScene extends Phaser.Scene {
     constructor() { super('Restaurant'); }
     create() {
         this.lanterns = [];
+        this.activeGuests = [];
+        this.groupTimer = undefined; this.introTimer = undefined;
+        this.ambientProgress.clear();
         this.customerMeal = undefined;
         this.guestVisit = undefined;
         this.guestGap = undefined;
@@ -72,6 +104,13 @@ export class RestaurantScene extends Phaser.Scene {
             this.resumeNight(); });
         window.addEventListener('pagehide', this.saveOnHide);
         this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+            this.groupTimer?.remove(false); this.introTimer?.remove(false);
+            for (const slot of this.activeGuests) {
+                slot.visit.cleanup();
+                if (slot.guest instanceof NabiView || slot.guest instanceof DubuView || slot.guest instanceof KkamangView) slot.guest.cleanup();
+                slot.guest.destroy();
+            }
+            this.activeGuests = [];
             this.customerMeal?.cleanup();
             this.guestVisit?.cleanup();
             this.guestGap?.remove(false);
@@ -222,8 +261,8 @@ export class RestaurantScene extends Phaser.Scene {
         }
         r(342, 791, 13, 69, 0x785141);
         r(379, 791, 13, 69, 0x785141);
-        r(308, 778, 117, 14, 0xb9825d);
-        r(316, 792, 101, 5, 0x563b37);
+        r(297, 778, 200, 14, 0xb9825d);
+        r(305, 792, 184, 5, 0x563b37);
         for (let y = 792; y < 901; y += 28)
             for (let x = 0; x < 720; x += 95)
                 r(x + (y % 56 === 8 ? 15 : 45), y, 69, 3, 0x59505a);
@@ -252,7 +291,10 @@ export class RestaurantScene extends Phaser.Scene {
     }
     hud() { $('hud').innerHTML = `<div class="topline"><span class="mini-brand">골목의 작은 불빛</span><button id="sound" class="sound" aria-label="소리 ${this.save.settings.sound ? '끄기' : '켜기'}">${icon('sound')}<span>${this.save.settings.sound ? 'ON' : 'OFF'}</span></button></div><div class="stats"><div>${icon('moon')}<span><small>오늘의 밤</small><b>${this.save.night}<em>번째 밤</em></b></span></div><div>${icon('coin')}<span><small>보유 골드</small><b>${this.save.gold}<em>G</em></b></span></div><div>${icon('star')}<span><small>식당 레벨</small><b>${this.save.level}<em>LV</em></b></span></div></div>`; on('sound', () => { audio.unlock(); this.save.settings.sound = audio.toggle(); SaveManager.save(this.save); this.hud(); }); }
     nav() { $('nav').innerHTML = `<button id="menu-nav">${icon('menu')}<span>메뉴</span></button><button id="guests-nav">${icon('heart')}<span>손님</span></button><button id="shop-nav">${icon('shop')}<span>가게</span></button><button id="book-nav">${icon('book')}<span>도감</span></button>`; on('menu-nav', () => { if (!this.guestInputLocked) this.menu(); }); on('guests-nav', () => { if (!this.guestInputLocked) CustomerBookScene.open(this.save); }); on('book-nav', () => { if (!this.guestInputLocked) CustomerBookScene.open(this.save); }); on('shop-nav', () => { if (!this.guestInputLocked) this.shop(); }); }
-    welcome() { this.phase = 'closed'; $('caption').textContent = weatherDefinitions[this.save.weather].caption; panel(`<div class="eyebrow">A LITTLE RESTAURANT, A WARM NIGHT</div><h1>길냥이 식당</h1><p class="muted">${weatherDefinitions[this.save.weather].greeting}</p><button class="primary" id="start">${this.save.night === 1 ? '첫 밤의 문 열기' : '오늘 밤 영업 시작'} <span>→</span></button><div class="panel-foot">${icon('save')} 자동 저장 · 느긋하게 즐겨도 괜찮아요</div>`); on('start', () => { if (this.phase !== 'closed') return; audio.unlock(); audio.note(392, .25); this.save.activeNight = { queue: CustomerManager.queue(this.save), report: emptyReport() }; SaveManager.save(this.save); this.nextGuest(); }); }
+    welcome() { this.phase = 'closed'; $('caption').textContent = weatherDefinitions[this.save.weather].caption; panel(`<div class="eyebrow">A LITTLE RESTAURANT, A WARM NIGHT</div><h1>길냥이 식당</h1><p class="muted">${weatherDefinitions[this.save.weather].greeting}</p><button class="primary" id="start">${this.save.night === 1 ? '첫 밤의 문 열기' : '오늘 밤 영업 시작'} <span>→</span></button><div class="panel-foot">${icon('save')} 자동 저장 · 느긋하게 즐겨도 괜찮아요</div>`); on('start', () => { if (this.phase !== 'closed') return; audio.unlock(); audio.note(392, .25); const condition = rollNightCondition(this.save.weather);
+            const queue = CustomerManager.queue(this.save, Math.random, condition);
+            this.save.activeNight = { queue, report: emptyReport(), condition, pairStarts: CustomerManager.pairs(this.save, queue) };
+            SaveManager.save(this.save); this.nightIntro(); }); }
     resumeNight() {
         const night = this.save.activeNight!;
         const previousId = night.queue[night.report.served - 1];
@@ -275,40 +317,71 @@ export class RestaurantScene extends Phaser.Scene {
         else
             this.nextGuest();
     }
-    nextGuest() {
-        if (!['closed', 'gap'].includes(this.phase) || this.guest?.active) return;
-        if (this.save.activeNight!.report.served >= this.save.activeNight!.queue.length) {
-            this.result(); return;
-        }
-        this.phase = 'arriving';
-        this.lockGuestInput(true);
-        const c = CustomerManager.current(this.save);
-        this.current = c; this.quietDeparture = false;
-        this.guestVisit?.cleanup(); this.guest?.destroy();
-        panel(`<div class="eyebrow">${this.save.activeNight!.report.served + 1} / 5 · 오늘의 손님</div><h2>작은 발걸음이 들려요</h2><p class="muted">누가 찾아왔을까요?</p><div class="waiting"><i></i><i></i><i></i></div>`);
-        $('caption').textContent = this.save.weather === 'rain' ? '젖은 발걸음이 작은 지붕 아래로 들어와요.' : weatherDefinitions[this.save.weather].caption;
-        if (c.id === 'dubu' || c.id === 'kkamang') {
-            CharacterStoryManager.reserve(c.id, this.save.customers[c.id], this.save.night, this.save);
-            SaveManager.save(this.save);
-        }
-        this.guest = this.createGuest(c.id, CustomerVisit.entrance.x, CustomerVisit.entrance.y);
-        this.guestVisit = this.createVisit();
-        this.guestVisit.enter(() => { this.phase = 'seating'; }, () => {
-            this.phase = 'waiting';
-            const p = this.save.customers[c.id];
-            if (this.guest instanceof NabiView) this.guest.settle(p.intimacy, p.characterStory?.stage ?? 0);
-            if (this.guest instanceof DubuView) this.guest.seated();
-            this.guestVisit!.wait();
-            p.unlocked = true; audio.note(330, .2);
-            CharacterStoryManager.reserve(c.id, p, this.save.night, this.save);
-            SaveManager.save(this.save);
-        }, () => {
-            if (this.phase !== 'waiting' || !this.guest?.active) return;
-            this.lockGuestInput(false);
-            this.playCharacterStory('before', () => this.order());
-        });
+    private nightIntro() {
+        this.phase = 'transition'; this.lockGuestInput(true);
+        const condition = nightConditions[this.save.activeNight!.condition ?? 'ordinary'];
+        panel(`<div class="eyebrow">NIGHT ${this.save.night} · 오늘의 골목</div><h2>${condition.title}</h2><p class="muted">${condition.description}</p><button id="night-intro" class="primary">문 열기 →</button>`);
+        const finish = () => {
+            if (this.phase !== 'transition') return;
+            this.introTimer?.remove(false); this.introTimer = undefined;
+            this.phase = 'closed'; this.nextGuest();
+        };
+        on('night-intro', finish); this.introTimer = this.time.delayedCall(1600,finish);
     }
-    order() { if (!['waiting', 'character-story'].includes(this.phase)) return; this.phase = 'order'; this.guestVisit?.wait(); this.lockGuestInput(false); const c = this.current!, r = this.currentRecipe = RecipeManager.order(c, this.save), p = this.save.customers[c.id]; panel(`<div class="eyebrow">${this.save.activeNight!.report.served + 1} / 5 · 손님이 기다려요</div><div class="order-row"><div><h2>${c.name} <small>${c.species}</small></h2><p class="quote">“${DialogueManager.order(c.id, this.save.weather, r, p)}”</p></div>${food(r.id)}</div><div class="order-bottom"><div><small>오늘의 주문</small><strong>${r.name}</strong></div><button class="primary" id="cook">요리 시작 ${icon('arrow')}</button></div>${p.characterStory?.pending?.eventId === 'KKAMANG_STORY_4' ? '<p class="preference">오늘만 · 계란 두 개를 부탁했어요</p>' : ''}${p.preferenceFound ? `<p class="preference">기억해 주세요 · ${ingredients[c.favoriteIngredients[0]].name}${c.favoriteIngredients[0] === 'warm' ? '' : ' 넉넉하게'}</p>` : ''}`); on('cook', () => { if (this.phase !== 'order') return; this.phase = 'cooking'; audio.note(440); new CookingScene(r, !!this.save.upgrades.pot, (quality, extra) => this.ready(quality, extra)); }); }
+    nextGuest() {
+        if (!['closed','gap'].includes(this.phase) || this.activeGuests.length || this.guest?.active) return;
+        const night = this.save.activeNight!, index = night.report.served;
+        if (index >= night.queue.length) { this.result(); return; }
+        this.phase = 'arriving'; this.lockGuestInput(true); this.quietDeparture = false;
+        const ids = [night.queue[index]];
+        if (night.pairStarts?.includes(index) && !CustomerManager.solo(this.save, ids[0]) && !CustomerManager.solo(this.save, night.queue[index+1])) ids.push(night.queue[index+1]);
+        panel(`<div class="eyebrow">${index+1} / ${night.queue.length} · 오늘의 손님</div><h2>${ids.length === 2 ? '두 발걸음이 함께 찾아와요' : '작은 발걸음이 들려요'}</h2><p class="muted">${ids.length === 2 ? '각자의 한 끼를 천천히 준비해 주세요.' : '누가 찾아왔을까요?'}</p><div class="waiting"><i></i><i></i><i></i></div>`);
+        $('caption').textContent = this.save.weather === 'rain' ? '젖은 발걸음이 작은 지붕 아래로 들어와요.' : weatherDefinitions[this.save.weather].caption;
+        let readyCount = 0;
+        const spawn = (id: string, seatIndex: number) => {
+            const c = customerById(id), p = this.progress(id);
+            if (ids.length === 1) CharacterStoryManager.reserve(id,p,this.save.night,this.save);
+            const seat = {x:seatIndex === 0 ? 246 : 526,y:733};
+            const guest = this.createGuest(id,CustomerVisit.entrance.x,CustomerVisit.entrance.y);
+            let slot: ActiveCustomer;
+            const visit = new CustomerVisit(this,guest,!!c.dog,() => ['waiting','ordering','cooking','reacting'].includes(slot.state),seat);
+            slot = {customer:c,guest,visit,seat,state:'entering',recipe:RecipeManager.order(c,this.save)};
+            this.activeGuests.push(slot);
+            visit.enter(() => {slot.state='seating';}, () => {
+                slot.state='waiting';
+                if (guest instanceof NabiView) guest.settle(p.intimacy,p.characterStory?.stage ?? 0);
+                if (guest instanceof DubuView) guest.seated();
+                visit.wait(); p.unlocked=true; audio.note(330,.2); SaveManager.save(this.save);
+            }, () => {
+                readyCount++;
+                if (readyCount !== ids.length) return;
+                this.selectGuest(this.activeGuests[0]); this.phase='waiting';
+                this.lockGuestInput(false);
+                this.playCharacterStory('before',() => this.order());
+            });
+        };
+        spawn(ids[0],0);
+        if (ids.length === 2) this.groupTimer=this.time.delayedCall(300,() => {this.groupTimer=undefined;spawn(ids[1],1);});
+    }
+    private chooseOrder() {
+        this.phase = 'order'; this.lockGuestInput(false);
+        panel(`<div class="eyebrow">두 자리의 따뜻한 한 끼</div><h2>누구부터 준비할까요?</h2><div class="pair-orders">${this.activeGuests.map((slot,i) => `<div class="pair-order"><div><strong>${slot.customer.name} · ${slot.recipe.name}</strong><p>${DialogueManager.order(slot.customer.id,this.save.weather,slot.recipe,this.progress(slot.customer.id),this.save.activeNight?.condition)}</p></div><button id="cook-order-${i}" class="primary">요리</button></div>`).join('')}</div>`);
+        this.activeGuests.forEach((slot,i) => on('cook-order-'+i,() => {
+            if (this.phase !== 'order' || slot.state !== 'waiting') return;
+            // The persisted queue follows actual serving order, including a refresh in the mini-game.
+            const n=this.save.activeNight!, start=n.report.served;
+            const chosen=n.queue.indexOf(slot.customer.id,start);
+            [n.queue[start],n.queue[chosen]]=[n.queue[chosen],n.queue[start]];
+            SaveManager.save(this.save);
+            this.selectGuest(slot); this.beginCooking();
+        }));
+    }
+    private beginCooking() {
+        if (this.phase !== 'order') return;
+        this.phase='cooking'; this.setCustomerState('cooking'); this.lockGuestInput(true); audio.note(440);
+        new CookingScene(this.currentRecipe!,!!this.save.upgrades.pot,(quality,extra) => this.ready(quality,extra));
+    }
+    order() { if (!['waiting', 'character-story'].includes(this.phase)) return; if (this.activeGuests.length === 2) { this.chooseOrder(); return; } this.phase = 'order'; this.guestVisit?.wait(); this.lockGuestInput(false); const c = this.current!, r = this.currentRecipe = this.activeGuests[0]?.recipe ?? RecipeManager.order(c, this.save), p = this.progress(c.id); panel(`<div class="eyebrow">${this.save.activeNight!.report.served + 1} / ${this.save.activeNight!.queue.length} · 손님이 기다려요</div><div class="order-row"><div><h2>${c.name} <small>${c.species}</small></h2><p class="quote">“${DialogueManager.order(c.id, this.save.weather, r, p,this.save.activeNight?.condition)}”</p></div>${food(r.id)}</div><div class="order-bottom"><div><small>오늘의 주문</small><strong>${r.name}</strong></div><button class="primary" id="cook">요리 시작 ${icon('arrow')}</button></div>${p.characterStory?.pending?.eventId === 'KKAMANG_STORY_4' ? '<p class="preference">오늘만 · 계란 두 개를 부탁했어요</p>' : ''}${p.preferenceFound ? `<p class="preference">기억해 주세요 · ${ingredients[c.favoriteIngredients[0]].name}${c.favoriteIngredients[0] === 'warm' ? '' : ' 넉넉하게'}</p>` : ''}`); on('cook', () => this.beginCooking()); }
     ready(q: Quality, extra: string) { this.phase = 'ready'; audio.success(); this.tweens.add({ targets: this.chef, angle: 5, duration: 140, yoyo: true, repeat: 3 }); panel(`<div class="eyebrow">정성을 담은 한 접시</div><div class="ready-row">${food(this.currentRecipe!.id)}<div><span class="quality q-${q === '완벽' ? 'perfect' : 'good'}">${q === '완벽' ? 'PERFECT · ' : ''}${q}</span><h2>${this.currentRecipe!.name}</h2><p class="muted">${extra ? ingredients[extra].name + '도 마음을 담아' : '따뜻할 때 전해 주세요.'}</p></div></div><button id="serve" class="primary">${this.current!.name}에게 음식 건네기 →</button>`); on('serve', () => this.serve(q, extra)); }
     private get guestInputLocked() { return ['arriving', 'seating', 'waiting', 'eating', 'standing', 'farewell', 'leaving', 'gap', 'transition'].includes(this.phase); }
     private lockGuestInput(locked: boolean) {
@@ -317,9 +390,9 @@ export class RestaurantScene extends Phaser.Scene {
     serve(q: Quality, extra: string) {
         if (this.phase !== 'ready' || !this.guest?.active) return;
         this.guestVisit?.pauseWaiting();
-        this.phase = 'eating';
+        this.phase = 'eating'; this.setCustomerState('eating');
         this.lockGuestInput(true);
-        const c = this.current!, p = this.save.customers[c.id];
+        const c = this.current!, p = this.progress(c.id);
         const quiet = (CharacterStoryManager.pendingEvent(c.id, p)?.after.some(line => line.emotion === 'quiet') ?? false) || (this.guest instanceof KkamangView && this.guest.quietArrival);
         this.quietDeparture = quiet;
         const favorite = p.preferenceFound && extra === c.favoriteIngredients[0];
@@ -329,7 +402,7 @@ export class RestaurantScene extends Phaser.Scene {
             () => { this.customerMeal = undefined; if (this.phase === 'eating') this.finishServing(q, extra, quiet); }, CharacterStoryManager.pendingEvent(c.id, p)?.serving);
     }
     private finishServing(q: Quality, extra: string, quiet: boolean) {
-        this.phase = 'reaction';
+        this.phase = 'reaction'; this.setCustomerState('reacting');
         this.guestVisit?.wait();
         this.lockGuestInput(false);
         const c = this.current!, reward = ProgressionManager.serve(this.save, c.id, q, extra);
@@ -337,10 +410,10 @@ export class RestaurantScene extends Phaser.Scene {
         audio.success();
         $('caption').textContent = '배부른 한 끼가, 다정한 기억이 됩니다.';
         if (this.guest instanceof NabiView && !quiet) {
-            const p = this.save.customers[c.id];
+            const p = this.progress(c.id);
             this.guest.affinity(reward.intimacy, p.intimacy, p.characterStory?.stage ?? 0);
         }
-        panel(`<div class="eyebrow">잘 먹었습니다</div><h2>${c.name}의 작은 인사</h2><p class="quote">“${DialogueManager.reaction(c.id, this.save.weather, reward.favorite)}”</p><div class="rewards"><span>${icon('coin')} +${reward.gold} G</span><span>${icon('heart')} 친밀도 +${reward.intimacy}${reward.favorite ? ' · 취향 보너스' : ''}</span></div><button id="next" class="primary">${reward.stories.length || this.save.customers[c.id].characterStory?.pending?.part === 'after' ? '이야기 들어 주기' : this.save.activeNight!.report.served === 5 ? '오늘 밤 마무리' : '다음 손님 맞이하기'} →</button>`);
+        panel(`<div class="eyebrow">잘 먹었습니다</div><h2>${c.name}의 작은 인사</h2><p class="quote">“${DialogueManager.reaction(c.id, this.save.weather, reward.favorite)}”</p><div class="rewards"><span>${icon('coin')} +${reward.gold} G</span>${c.role === 'ambient' ? '' : `<span>${icon('heart')} 친밀도 +${reward.intimacy}${reward.favorite ? ' · 취향 보너스' : ''}</span>`}</div><button id="next" class="primary">${reward.stories.length || this.progress(c.id).characterStory?.pending?.part === 'after' ? '이야기 들어 주기' : this.activeGuests.length > 1 ? '남은 손님의 한 끼 준비하기' : this.save.activeNight!.report.served === this.save.activeNight!.queue.length ? '오늘 밤 마무리' : '다음 손님 맞이하기'} →</button>`);
         on('next', () => {
             if (this.phase !== 'reaction') return;
             this.phase = 'transition';
@@ -354,7 +427,7 @@ export class RestaurantScene extends Phaser.Scene {
         });
     }
     playCharacterStory(part: StoryPart, next: () => void) {
-        const c = this.current!, p = this.save.customers[c.id];
+        const c = this.current!, p = this.progress(c.id);
         const pending = p.characterStory?.pending, event = CharacterStoryManager.pendingEvent(c.id, p);
         if (!pending || pending.part !== part || !event || !event[part].length) { next(); return; }
         this.guestVisit?.pauseWaiting();
@@ -396,7 +469,7 @@ export class RestaurantScene extends Phaser.Scene {
         const c = this.current!;
         let i = 0;
         const show = () => {
-            panel(`<div class="eyebrow">조금 더 가까워진 마음 · 이야기 ${this.save.customers[c.id].storyStage}/3</div><h2>${c.name}의 이야기</h2><p class="quote">“${lines[i]}”</p><button id="story-next" class="primary">${i === lines.length - 1 ? '마음에 담아 두기' : '계속 듣기'} →</button>`);
+            panel(`<div class="eyebrow">조금 더 가까워진 마음 · 이야기 ${this.progress(c.id).storyStage}/3</div><h2>${c.name}의 이야기</h2><p class="quote">“${lines[i]}”</p><button id="story-next" class="primary">${i === lines.length - 1 ? '마음에 담아 두기' : '계속 듣기'} →</button>`);
             on('story-next', () => {
                 if (++i < lines.length)
                     show();
@@ -415,7 +488,7 @@ export class RestaurantScene extends Phaser.Scene {
     }
     private createGuest(id: string, x: number, y: number) {
         if (id === 'nabi') return new NabiView(this, x, y);
-        const event = CharacterStoryManager.pendingEvent(id, this.save.customers[id]);
+        const event = CharacterStoryManager.pendingEvent(id, this.progress(id));
         if (id === 'dubu') return new DubuView(this, x, y, event);
         if (id === 'kkamang') return new KkamangView(this, x, y, event, this.save.weather === 'rain');
         return this.add.image(x, y, id).setOrigin(.5, .5).setScale(customerRender.scale).setDepth(2);
@@ -423,15 +496,20 @@ export class RestaurantScene extends Phaser.Scene {
     private createVisit() { return new CustomerVisit(this, this.guest!, !!this.current!.dog, () => ['waiting', 'order', 'cooking', 'ready', 'reaction'].includes(this.phase)); }
     depart() {
         if (!this.guest?.active || ['standing', 'farewell', 'leaving', 'gap'].includes(this.phase)) return;
-        const guest = this.guest, visit = this.guestVisit!, p = this.save.customers[this.current!.id];
+        const guest = this.guest, visit = this.guestVisit!, p = this.progress(this.current!.id);
         if (p.characterStory?.pending) return;
         const complete = CharacterStoryManager.complete(this.current!.id, p);
-        this.lockGuestInput(true);
+        this.lockGuestInput(true); this.setCustomerState('leaving');
         panel('<div class="eyebrow">또 만나요</div><h2>다음 밤에도 기다릴게요.</h2><p class="muted">골목에 따뜻한 기억 하나가 남았어요.</p>');
         visit.leave(p.intimacy, complete, this.quietDeparture,
             () => { this.phase = 'standing'; }, () => { this.phase = 'farewell'; }, () => { this.phase = 'leaving'; }, () => {
                 if (guest instanceof NabiView || guest instanceof DubuView || guest instanceof KkamangView) guest.cleanup();
                 guest.destroy(); this.guest = undefined; this.guestVisit = undefined;
+                this.activeGuests = this.activeGuests.filter(slot => slot.guest !== guest);
+                if (this.activeGuests.length) {
+                    const remaining = this.activeGuests[0]; remaining.state='waiting';
+                    this.selectGuest(remaining); this.phase='waiting'; this.order(); return;
+                }
                 this.phase = 'gap';
                 this.guestGap = this.time.delayedCall(400, () => {
                     this.guestGap = undefined;

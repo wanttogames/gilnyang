@@ -62,3 +62,10 @@
 #modal{z-index:10}
 
 .portrait.pixel-portrait{width:96px;height:96px;object-fit:contain;image-rendering:pixelated;background:none;box-shadow:none;margin:0 auto 0}
+
+/* Two orders reuse the warm panel; stacked rows remain reachable with one thumb. */
+#panel:has(.pair-orders){top:835px;height:358px;padding:18px 24px}
+.pair-orders{display:flex;flex-direction:column;gap:12px;margin-top:12px}
+.pair-order{display:flex;align-items:center;gap:14px;padding:6px 12px;background:#e6d4b7;border-radius:8px;min-height:90px}
+.pair-order>div{flex:1;min-width:0}.pair-order strong{font-size:21px}.pair-order p{font-size:17px;line-height:1.35;margin-top:5px}
+.pair-order .primary{flex:0 0 110px;width:110px;min-height:100px;margin:0;padding:12px;font-size:23px}

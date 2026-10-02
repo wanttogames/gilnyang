@@ -18,7 +18,8 @@ export class CustomerVisit {
     private cleaned = false;
     private departing = false;
     constructor(private scene: Phaser.Scene, private guest: Phaser.GameObjects.Image | NabiView | DubuView | KkamangView,
-        private dog: boolean, private canWait: () => boolean) {
+        private dog: boolean, private canWait: () => boolean,
+        private seat = CustomerVisit.seat) {
         const id = guest instanceof NabiView ? 'nabi' : guest.texture.key.replace('-blink', '');
         this.shadow = scene.add.ellipse(0, 0, customerShadowWidth(id), 9, 0x101626, .28)
             .setDepth(guest.depth - .1).setName('customer-ground-shadow');
@@ -60,18 +61,18 @@ export class CustomerVisit {
     enter(seating: () => void, seated: () => void, ready: () => void) {
         const dubu = this.guest instanceof DubuView ? this.guest : undefined;
         const arrive = () => {
-            if (dubu && !dubu.quietArrival) this.animate({ targets: dubu, x: CustomerVisit.approach.x, angle: -3, duration: 170 }, seat);
+            if (dubu && !dubu.quietArrival) this.animate({ targets: dubu, x: (this.seat.x - 22), angle: -3, duration: 170 }, seat);
             else seat();
         };
         const seat = () => {
             seating();
             if (this.guest instanceof KkamangView) this.guest.arrivalLook();
             this.animate({ targets: this.guest, angle: this.guest instanceof KkamangView ? .5 : this.dog ? -2 : 1.5, duration: 120, yoyo: true });
-            this.later(this.guest instanceof KkamangView ? 360 : 270, () => this.animate({ targets: this.guest, ...CustomerVisit.seat, scaleY: customerRender.seatedScaleY, duration: 260, ease: 'Sine.easeOut' }, () => { seated(); this.later(dubu ? 330 : 240, ready); }));
+            this.later(this.guest instanceof KkamangView ? 360 : 270, () => this.animate({ targets: this.guest, ...this.seat, scaleY: customerRender.seatedScaleY, duration: 260, ease: 'Sine.easeOut' }, () => { seated(); this.later(dubu ? 330 : 240, ready); }));
         };
-        this.walk(CustomerVisit.approach.x + (dubu && !dubu.quietArrival ? 4 : 0), CustomerVisit.approach.y, dubu ? dubu.quietArrival ? 1400 : 850 : this.guest instanceof KkamangView ? this.guest.quietArrival ? 1450 : 1300 : 1150, arrive);
+        this.walk((this.seat.x - 22) + (dubu && !dubu.quietArrival ? 4 : 0), (this.seat.y - 4), dubu ? dubu.quietArrival ? 1400 : 850 : this.guest instanceof KkamangView ? this.guest.quietArrival ? 1450 : 1300 : 1150, arrive);
     }
-    restoreSeat() { this.guest.setPosition(CustomerVisit.seat.x, CustomerVisit.seat.y).setAngle(0).setScale(customerRender.scale, customerRender.seatedScaleY); this.syncShadow(); }
+    restoreSeat() { this.guest.setPosition(this.seat.x, this.seat.y).setAngle(0).setScale(customerRender.scale, customerRender.seatedScaleY); this.syncShadow(); }
     wait() {
         if (this.cleaned || this.departing || this.waiting) return;
         this.waiting = true;
@@ -79,7 +80,7 @@ export class CustomerVisit {
         // Nabi already owns random eyes/ears/tail; do not add a second idle timer.
         if (this.guest instanceof NabiView) return;
         if (this.guest instanceof DubuView || this.guest instanceof KkamangView) { this.guest.wait(); return; }
-        this.animate({ targets: this.guest, y: CustomerVisit.seat.y - 1, duration: 1600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+        this.animate({ targets: this.guest, y: this.seat.y - 1, duration: 1600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
         const blink = () => this.later(Phaser.Math.Between(2500, 5000), () => {
             if (!this.canWait()) { blink(); return; }
             const image = this.guest as Phaser.GameObjects.Image, key = image.texture.key.replace('-blink', '');
@@ -90,7 +91,7 @@ export class CustomerVisit {
         const action = () => this.later(Phaser.Math.Between(4000, 8000), () => {
             if (!this.canWait()) { action(); return; }
             // Dogs tilt towards the kitchen; cats give the table a tiny sniff.
-            this.animate({ targets: this.guest, angle: this.dog ? -2 : 1, x: CustomerVisit.seat.x + (this.dog ? 0 : 1), duration: 220, yoyo: true }, action);
+            this.animate({ targets: this.guest, angle: this.dog ? -2 : 1, x: this.seat.x + (this.dog ? 0 : 1), duration: 220, yoyo: true }, action);
         });
         action();
     }
@@ -108,7 +109,7 @@ export class CustomerVisit {
         this.pauseWaiting(); this.clearActivity(); this.departing = true;
         if (this.guest instanceof NabiView) this.guest.walking();
         standing();
-        this.later(160, () => this.animate({ targets: this.guest, y: CustomerVisit.approach.y, scaleY: customerRender.scale, duration: 260 }, () => {
+        this.later(160, () => this.animate({ targets: this.guest, y: (this.seat.y - 4), scaleY: customerRender.scale, duration: 260 }, () => {
             farewell();
             const familiar = intimacy >= 10, friend = intimacy >= 25;
             if (this.guest instanceof NabiView) this.guest.farewell(familiar, friend || completeStory, quiet);

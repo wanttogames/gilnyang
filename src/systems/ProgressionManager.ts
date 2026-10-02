@@ -10,6 +10,13 @@ export class ProgressionManager {
     static serve(s: SaveData, id: string, q: Quality, extra: string) {
         const c = customerById(id), p = s.customers[id], r = s.activeNight!.report;
         const reward = CookingManager.reward(q);
+        s.recentCustomers = [...(s.recentCustomers ?? []), id].slice(-3);
+        if (c.role === 'ambient') {
+            s.gold += reward.gold; r.gold += reward.gold;
+            r.perfect += q === '완벽' ? 1 : 0; r.served++;
+            SaveManager.save(s);
+            return { gold: reward.gold, intimacy: 0, favorite: false, stories: [] as string[] };
+        }
         const favorite = p.preferenceFound && extra === c.favoriteIngredients[0];
         const gain = reward.intimacy + (favorite ? 2 : 0) + (s.upgrades.chair ? 1 : 0);
         p.unlocked = true;

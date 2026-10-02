@@ -1,10 +1,21 @@
+import { ambientPixels } from '../game/AmbientArt';
+import { ambientById } from '../data/ambientCustomers';
 import Phaser from 'phaser';
 import { characterPixels, dubuPart, kkamangPart, drawPixels, hasCharacterArt, nabiEar, nabiTail, nabiTailLayout } from '../game/CharacterArt';
-import { customers } from '../data/customers';
+import { allCustomers } from '../data/customers';
 export class BootScene extends Phaser.Scene {
     constructor() { super('Boot'); }
     create() {
-        for (const c of [{ id: 'chef', color: 0xd6c6b6, accent: 0x918275, dog: false }, ...customers]) {
+        for (const c of [{ id: 'chef', color: 0xd6c6b6, accent: 0x918275, dog: false }, ...allCustomers]) {
+            const ambient = ambientById(c.id);
+            if (ambient) {
+                for (const blink of [false, true]) {
+                    const g = this.make.graphics({x:0,y:0});
+                    drawPixels(g, ambientPixels(ambient, blink));
+                    g.generateTexture(c.id + (blink ? '-blink' : ''),48,48); g.destroy();
+                }
+                continue;
+            }
             if (hasCharacterArt(c.id)) {
                 for (const layer of c.id === 'nabi' || c.id === 'dubu' || c.id === 'kkamang' ? ['', '-body'] : ['']) {
                     for (const blink of [false, true]) {

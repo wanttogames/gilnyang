@@ -1,13 +1,14 @@
 {
   "name": "gilnyang",
   "private": true,
-  "version": "0.3.9",
+  "version": "0.4.0",
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host 0.0.0.0",
-    "test:story": "node tests/character-story.cjs"
+    "test:story": "node tests/character-story.cjs",
+    "test:variety": "node tests/customer-variety.cjs"
   },
   "dependencies": {
     "phaser": "^3.90.0"

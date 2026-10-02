@@ -1,3 +1,4 @@
+import { ambientCustomers } from './ambientCustomers';
 import type { Customer } from '../types/Customer';
 export const customers: Customer[] = [
     { id: 'nabi', name: '나비', species: '삼색 고양이', personality: '조용하고 수줍은 골목 산책가', favoriteFoodIds: ['rice'], favoriteIngredients: ['seaweed'], color: 0xf7edda, accent: 0xda9152, unlockNight: 1 },
@@ -9,4 +10,5 @@ export const customers: Customer[] = [
     { id: 'dal', name: '달이', species: '회색 고양이', personality: '달빛 아래 시를 쓰는 여행자', favoriteFoodIds: ['milk'], favoriteIngredients: ['warm'], color: 0x999daf, accent: 0xe2dfd7, unlockNight: 7 },
     { id: 'hodu', name: '호두', species: '갈색 푸들', personality: '언젠가 빵집을 열고 싶은 꿈쟁이', favoriteFoodIds: ['rice'], favoriteIngredients: ['tuna'], color: 0x98705d, accent: 0xcfad87, dog: true, unlockNight: 10 }
 ];
-export const customerById = (id: string) => customers.find(c => c.id === id)!;
+export const allCustomers = [...customers, ...ambientCustomers];
+export const customerById = (id: string) => allCustomers.find(c => c.id === id)!;

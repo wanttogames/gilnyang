@@ -1,3 +1,5 @@
+import type { NightConditionId } from '../data/nightConditions';
+import { ambientById } from '../data/ambientCustomers';
 import { CharacterStoryManager } from './CharacterStoryManager';
 import { nabiAfterStoryOrders, nabiPreferenceOrders, dubuAfterStoryOrders, kkamangAfterStoryOrders } from '../data/characterStories';
 import { rainDialogues } from '../data/rainDialogues';
@@ -6,7 +8,13 @@ import type { Recipe } from '../types/Recipe';
 import { dialogues } from '../data/dialogues';
 import type { CustomerProgress } from '../types/Customer';
 export class DialogueManager {
-    static order(id: string, weather: Weather, recipe: Recipe, progress?: CustomerProgress): string {
+    static order(id: string, weather: Weather, recipe: Recipe, progress?: CustomerProgress, condition?: NightConditionId): string {
+        const ambient = ambientById(id);
+        if (ambient) {
+            if (weather === 'rain' && Math.random() < .35) return '비를 피해 들어왔어요. ' + recipe.name + ' 주세요.';
+            if (condition === 'cold' && Math.random() < .35) return '바람이 차네요. ' + recipe.name + ' 주세요.';
+            return ambient.dialogues[Math.floor(Math.random() * ambient.dialogues.length)];
+        }
         if (id === 'kkamang' && recipe.id === 'ramen') {
             if (progress?.characterStory?.pending?.eventId === 'KKAMANG_STORY_4') return '오늘은 계란 두 개.';
             if (progress && CharacterStoryManager.complete(id, progress)) {
@@ -41,6 +49,8 @@ export class DialogueManager {
         return dialogues[id].order;
     }
     static reaction(id: string, weather: Weather, favorite: boolean): string {
+        const ambient = ambientById(id);
+        if (ambient) return ambient.thanks[Math.floor(Math.random() * ambient.thanks.length)];
         return favorite ? dialogues[id].favorite : weather === 'rain' ? rainDialogues[id].thanks : dialogues[id].thanks;
     }
     static unlock(id: string, p: CustomerProgress): string[] {

@@ -23,21 +23,23 @@ export class CustomerMeal {
         this.paused.forEach(tween => tween.pause());
         if (guest instanceof NabiView || guest instanceof DubuView || guest instanceof KkamangView) guest.beginEating();
         scene.events.once(Phaser.Scenes.Events.SHUTDOWN, this.cleanup, this);
-        const plate = scene.add.ellipse(326, 778, 58, 13, 0xe7cda5).setDepth(2.5).setName('meal-plate');
-        const food = scene.add.image(326, 752, 'meal-' + (recipeId === 'ramen' && serving === 'two-eggs' ? 'ramen-two-eggs' : recipeId)).setScale(2).setDepth(2.6).setName('served-food');
+        const foodX = guest.x + (guest.x > 360 ? -70 : 80);
+        const direction = guest.x > 360 ? -1 : 1;
+        const plate = scene.add.ellipse(foodX, 778, 58, 13, 0xe7cda5).setDepth(2.5).setName('meal-plate');
+        const food = scene.add.image(foodX, 752, 'meal-' + (recipeId === 'ramen' && serving === 'two-eggs' ? 'ramen-two-eggs' : recipeId)).setScale(2).setDepth(2.6).setName('served-food');
         food.setData('serving', serving ?? 'normal');
         this.objects.add(plate); this.objects.add(food);
         this.animate({ targets: food, y: 768, duration: 260, ease: 'Sine.easeOut' });
         // A few wisps for warm food, restrained on rice/bread.
         for (let i = 0; i < (recipeId === 'oden' || recipeId === 'ramen' ? 2 : 1); i++) {
-            const steam = scene.add.rectangle(321 + i * 9, 748, 3, 7, 0xfbe5bf, .3).setDepth(2.7).setName('meal-steam');
+            const steam = scene.add.rectangle(foodX - 5 + i * 9, 748, 3, 7, 0xfbe5bf, .3).setDepth(2.7).setName('meal-steam');
             this.objects.add(steam);
             this.animate({ targets: steam, y: 722, x: steam.x + 4, alpha: 0, duration: 1200, delay: i * 240 });
         }
-        this.later(350, () => this.animate({ targets: guest, x: this.x + 1, angle: this.angle + 1, duration: 200 }));
-        this.later(600, () => this.animate({ targets: guest, x: this.x + (guest instanceof KkamangView ? 1 : 3), y: this.y + (guest instanceof KkamangView ? .5 : 1), duration: 160, yoyo: true, repeat: 1 }));
+        this.later(350, () => this.animate({ targets: guest, x: this.x + direction, angle: this.angle + 1, duration: 200 }));
+        this.later(600, () => this.animate({ targets: guest, x: this.x + direction * (guest instanceof KkamangView ? 1 : 3), y: this.y + (guest instanceof KkamangView ? .5 : 1), duration: 160, yoyo: true, repeat: 1 }));
         this.later(1250, () => {
-            this.animate({ targets: guest, x: this.x + (guest instanceof KkamangView ? 2 : 4), y: this.y + (guest instanceof KkamangView ? 1 : 2), duration: 160, yoyo: true });
+            this.animate({ targets: guest, x: this.x + direction * (guest instanceof KkamangView ? 2 : 4), y: this.y + (guest instanceof KkamangView ? 1 : 2), duration: 160, yoyo: true });
             this.animate({ targets: food, scale: 1.5, alpha: .8, duration: 200 });
         });
         this.later(quality === '완벽' ? 1800 : 1550, () => {
