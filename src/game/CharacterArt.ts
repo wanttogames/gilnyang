@@ -44,6 +44,7 @@ export function characterPixels(id: RefinedCharacterId, blink = false, bodyOnly 
             [24,20,3,3,stripe],[27,16,3,6,stripe],
             [8,24,5,2,stripe],[34,24,5,2,stripe],[10,29,4,2,shade],[33,29,4,2,shade],
             [15,24,3,blink?1:4,ink],[29,24,3,blink?1:4,ink],
+            ...(!blink ? [[16,24,1,1,light],[30,24,1,1,light],[12,29,3,1,0xc48f89],[34,29,3,1,0xc48f89]] as Pixel[] : []),
             [18,29,11,5,light],[22,29,3,2,brown],[23,31,1,2,brown],
             [21,33,5,1,brown],[19,35,9,6,light]
         ];
@@ -62,6 +63,7 @@ export function characterPixels(id: RefinedCharacterId, blink = false, bodyOnly 
             [10,23,2,6,rim],[36,23,2,6,shadow],[14,31,4,2,rim],
             [15,24,5,blink?1:3,gold],[28,24,5,blink?1:3,gold],
             [17,24,1,blink?0:3,shadow],[30,24,1,blink?0:3,shadow],
+            ...(!blink ? [[16,24,1,1,0xf7edda],[29,24,1,1,0xf7edda]] as Pixel[] : []),
             [22,29,3,2,rim],[23,32,2,1,shadow]
         ];
         return bodyOnly ? pixels.filter((_, i) => i >= 4 && !(i >= 10 && i < 18)) : pixels;
@@ -97,7 +99,8 @@ export function characterPixels(id: RefinedCharacterId, blink = false, bodyOnly 
             [12,14,10,4,orange],[10,18,11,10,orange],[12,28,7,3,orange],
             [28,14,8,4,ink],[28,18,10,11,ink],[32,29,4,2,ink],
             [16,22,3,blink?1:4,ink],[29,22,3,blink?1:4,white],
-            [29,23,2,blink?0:2,ink],[22,28,3,2,pink],[23,30,1,2,ink],
+            [29,23,2,blink?0:2,ink],...(!blink ? [[17,22,1,1,white],[30,22,1,1,white]] as Pixel[] : []),
+            [22,28,3,2,pink],[23,30,1,2,ink],
             [20,32,3,1,pink],[24,32,3,1,pink],
             [8,28,4,1,ink],[7,31,5,1,ink],[36,28,4,1,ink],[36,31,5,1,ink],
             [18,36,10,7,white]);
@@ -118,6 +121,7 @@ export function characterPixels(id: RefinedCharacterId, blink = false, bodyOnly 
         [12,14,24,5,tan],[8,19,32,9,tan],[10,28,28,4,tan],[14,32,20,3,tan],
         [12,21,5,2,cream],[30,21,5,2,cream],
         [15,24,3,blink?1:3,brown],[29,24,3,blink?1:3,brown],
+        ...(!blink ? [[16,24,1,1,cream],[30,24,1,1,cream]] as Pixel[] : []),
         [11,28,9,3,cream],[28,28,9,3,cream],[15,30,18,4,cream],[19,27,10,7,cream],
         [22,28,4,3,brown],[23,31,2,2,brown],[19,32,3,1,brown],[26,32,3,1,brown],
         [20,33,8,1,brown],[11,38,5,4,tan],[32,38,5,4,tan]

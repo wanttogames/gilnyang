@@ -9,7 +9,6 @@ const ink = 0x51463f, deepInk = 0x39343c, pink = 0xca9690;
  */
 export function ambientPixels(c: AmbientCustomer, blink: boolean): Pixel[] {
     const fur = c.color, light = c.accent;
-    const eye = (x: number, y: number, color = deepInk, height = blink ? 1 : 4): Pixel => [x, y, 3, height, color];
 
     switch (c.look) {
         case 'kitten': {
@@ -23,6 +22,7 @@ export function ambientPixels(c: AmbientCustomer, blink: boolean): Pixel[] {
                 [14,14,3,5,fur],[12,17,5,4,fur],[31,14,3,5,fur],[31,17,5,4,fur],
                 [14,15,3,3,pink],[31,15,3,3,pink],
                 [15,23,5,blink?1:6,deepInk],[29,23,5,blink?1:6,deepInk],
+                [16,24,1,1,light],[30,24,1,1,light],[13,29,4,2,0xe7aaa1],[31,29,4,2,0xe7aaa1],
                 [21,30,7,4,light],[23,31,3,2,pink],[21,34,7,2,ink],
             ];
         }
@@ -37,6 +37,7 @@ export function ambientPixels(c: AmbientCustomer, blink: boolean): Pixel[] {
                 [15,10,3,5,fur],[13,13,5,4,fur],[30,10,3,5,fur],[28,13,5,4,fur],
                 [15,11,2,4,0xc5b9aa],[31,11,2,4,0xc5b9aa],
                 [15,22,4,blink?1:4,0x65725e],[29,22,4,blink?1:4,0x65725e],
+                [16,23,1,1,0xf7edda],[30,23,1,1,0xf7edda],[13,27,4,1,0xdcb1aa],[31,27,4,1,0xdcb1aa],
                 [21,29,7,5,light],[23,30,3,2,pink],[21,33,7,2,ink],
                 [13,17,5,3,0xe1d6c8],
             ];
@@ -54,6 +55,7 @@ export function ambientPixels(c: AmbientCustomer, blink: boolean): Pixel[] {
                 [15,11,2,4,0xa5aaa9],[31,11,2,4,0xa5aaa9],
                 [16,16,4,7,stripe],[22,14,4,5,stripe],[28,16,4,7,stripe],
                 [14,23,4,blink?1:4,0x445446],[30,23,4,blink?1:4,0x445446],
+                [15,24,1,1,light],[31,24,1,1,light],[12,27,4,1,0xb89190],[32,27,4,1,0xb89190],
                 [10,29,5,2,stripe],[33,29,5,2,stripe],[21,30,7,4,light],[23,31,3,2,pink],[21,34,7,2,ink],
                 [17,36,4,3,stripe],[28,36,4,3,stripe],
             ];
@@ -70,6 +72,7 @@ export function ambientPixels(c: AmbientCustomer, blink: boolean): Pixel[] {
                 [14,10,4,7,fur],[12,15,6,5,fur],[30,10,4,7,fur],[30,15,6,5,fur],
                 [14,11,3,5,patch],[31,11,3,5,patch],
                 [14,22,4,blink?1:4,deepInk],[30,22,4,blink?1:4,deepInk],
+                [15,23,1,1,light],[31,23,1,1,light],[10,27,4,2,0xc58f8b],[34,27,4,2,0xc58f8b],
                 [9,25,6,3,patch],[33,25,6,3,patch],[20,29,8,5,light],[23,30,3,2,pink],[21,34,7,2,ink],
                 [14,37,4,3,patch],[30,37,4,3,patch],
             ];
@@ -85,6 +88,7 @@ export function ambientPixels(c: AmbientCustomer, blink: boolean): Pixel[] {
                 [28,8,5,4,ink],[26,11,9,5,ink],[25,14,10,6,ink],[37,8,5,4,ink],[35,11,9,5,ink],[35,14,10,6,ink],
                 [29,10,3,4,rust],[27,13,6,4,rust],[38,10,3,4,rust],[36,13,6,4,rust],
                 [29,21,4,blink?1:4,deepInk],[39,21,4,blink?1:4,deepInk],
+                [30,22,1,1,cream],[40,22,1,1,cream],[31,25,3,1,0xd89383],[40,25,3,1,0xd89383],
                 [34,25,9,7,cream],[36,27,5,3,ink],[35,30,7,2,ink],
                 [20,33,5,7,cream],
             ];
@@ -99,7 +103,8 @@ export function ambientPixels(c: AmbientCustomer, blink: boolean): Pixel[] {
                 [9,15,30,24,ink],[11,16,26,21,tan],[14,31,20,6,white],
                 [5,18,11,18,ink],[7,20,7,14,black],[32,18,11,18,ink],[34,20,7,14,black],
                 [19,14,10,19,white],[14,19,6,7,black],[28,19,6,7,black],
-                [15,23,4,blink?1:4,deepInk],[29,23,4,blink?1:4,deepInk],
+                [15,23,4,blink?1:4,0x594739],[29,23,4,blink?1:4,0x594739],
+                [16,24,1,1,white],[30,24,1,1,white],[12,29,3,2,0xd99689],[33,29,3,2,0xd99689],
                 [18,29,14,7,white],[21,29,8,5,white],[23,29,4,3,black],[22,33,8,2,ink],
                 [10,36,6,3,black],
             ];
@@ -115,10 +120,25 @@ export function ambientPixels(c: AmbientCustomer, blink: boolean): Pixel[] {
                 [5,16,12,20,ink],[7,18,8,15,shadow],[32,17,11,18,ink],[34,19,7,13,grey],
                 [13,15,5,3,pale],[29,15,5,3,pale],
                 [15,23,4,blink?1:3,deepInk],[29,23,4,blink?1:3,deepInk],
+                [16,24,1,1,pale],[30,24,1,1,pale],
                 [11,22,5,2,pale],[32,22,5,2,pale],[19,29,14,7,pale],[22,29,8,5,pale],
                 [22,29,6,4,pale],[23,30,4,3,shadow],[21,34,8,2,shadow],[18,36,3,2,shadow],[29,36,3,2,shadow],
             ];
         }
     }
     return [];
+}
+
+const tailPixelCount: Record<AmbientCustomer['look'], number> = {
+    kitten: 3, white: 4, grey: 5, round: 4, corgi: 2, beagle: 3, elder: 2,
+};
+
+/** Return the original full-canvas tail as a separate layer for subtle wagging. */
+export function ambientTailPixels(c: AmbientCustomer): Pixel[] {
+    return ambientPixels(c, false).slice(0, tailPixelCount[c.look]);
+}
+
+/** Main body without the tail, preserving the same 48px anchor as the full portrait. */
+export function ambientBodyPixels(c: AmbientCustomer, blink: boolean): Pixel[] {
+    return ambientPixels(c, blink).slice(tailPixelCount[c.look]);
 }

@@ -5,12 +5,14 @@ import { nightConditions, rollNightCondition } from '../data/nightConditions';
 import type { CustomerProgress } from '../types/Customer';
 import { customerRender } from '../game/CharacterArt';
 import { CustomerVisit } from '../game/CustomerVisit';
+import { AmbientCustomerView } from '../game/AmbientCustomerView';
 import { RestaurantEnvironment } from '../game/RestaurantEnvironment';
 import { CustomerMeal } from '../game/CustomerMeal';
 import { KkamangView } from '../game/KkamangView';
 import { DubuView } from '../game/DubuView';
 import { NabiView } from '../game/NabiView';
 import { customerById } from '../data/customers';
+import { ambientById } from '../data/ambientCustomers';
 import { CharacterStoryManager } from '../systems/CharacterStoryManager';
 import { StoryDialogue } from '../ui/StoryDialogue';
 import type { StoryPart, StoryLine } from '../types/CharacterStory';
@@ -35,7 +37,7 @@ import { $, panel, on, toast, icon, modal, closeModal, food } from '../ui/UI';
 import type { SaveData } from '../types/SaveData';
 import type { Customer } from '../types/Customer';
 import type { Quality } from '../types/Recipe';
-type GuestView = Phaser.GameObjects.Image | NabiView | DubuView | KkamangView;
+type GuestView = Phaser.GameObjects.Image | NabiView | DubuView | KkamangView | AmbientCustomerView;
 type CustomerState = 'entering' | 'seating' | 'waiting' | 'ordering' | 'cooking' | 'eating' | 'reacting' | 'leaving';
 interface ActiveCustomer {
     customer: Customer;
@@ -47,7 +49,7 @@ interface ActiveCustomer {
 }
 export class RestaurantScene extends Phaser.Scene {
     save!: SaveData;
-    guest?: Phaser.GameObjects.Image | NabiView | DubuView | KkamangView;
+    guest?: GuestView;
     chef!: Phaser.GameObjects.Image;
     phase: 'closed' | 'arriving' | 'seating' | 'waiting' | 'order' | 'cooking' | 'ready' | 'eating' | 'reaction' | 'transition' | 'character-story' | 'standing' | 'farewell' | 'leaving' | 'gap' | 'alley-event' | 'result' = 'closed';
     current?: Customer;
@@ -520,6 +522,8 @@ export class RestaurantScene extends Phaser.Scene {
         const event = CharacterStoryManager.pendingEvent(id, this.progress(id));
         if (id === 'dubu') return new DubuView(this, x, y, event);
         if (id === 'kkamang') return new KkamangView(this, x, y, event, this.save.weather === 'rain');
+        const ambient = ambientById(id);
+        if (ambient) return new AmbientCustomerView(this, ambient, x, y);
         return this.add.image(x, y, id).setOrigin(.5, .5).setScale(customerRender.scale).setDepth(2);
     }
     private createVisit() { return new CustomerVisit(this, this.guest!, !!this.current!.dog, () => ['waiting', 'order', 'cooking', 'ready', 'reaction'].includes(this.phase)); }

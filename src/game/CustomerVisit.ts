@@ -3,6 +3,7 @@ import { customerRender, customerShadowWidth } from './CharacterArt';
 import { KkamangView } from './KkamangView';
 import { DubuView } from './DubuView';
 import { NabiView } from './NabiView';
+import { AmbientCustomerView } from './AmbientCustomerView';
 
 /** Owns only one guest's movement/waiting. Scene phase remains the single flow state. */
 export class CustomerVisit {
@@ -17,7 +18,7 @@ export class CustomerVisit {
     private waiting = false;
     private cleaned = false;
     private departing = false;
-    constructor(private scene: Phaser.Scene, private guest: Phaser.GameObjects.Image | NabiView | DubuView | KkamangView,
+    constructor(private scene: Phaser.Scene, private guest: Phaser.GameObjects.Image | NabiView | DubuView | KkamangView | AmbientCustomerView,
         private dog: boolean, private canWait: () => boolean,
         private seat = CustomerVisit.seat) {
         const id = guest instanceof NabiView ? 'nabi' : guest.texture.key.replace('-blink', '');
@@ -77,21 +78,52 @@ export class CustomerVisit {
         if (this.cleaned || this.departing || this.waiting) return;
         this.waiting = true;
         this.restoreSeat();
-        // Nabi already owns random eyes/ears/tail; do not add a second idle timer.
-        if (this.guest instanceof NabiView) return;
-        if (this.guest instanceof DubuView || this.guest instanceof KkamangView) { this.guest.wait(); return; }
-        this.animate({ targets: this.guest, y: this.seat.y - 1, duration: 1600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+        const guest = this.guest;
+        // Main story guests own their own idle animation controller.
+        if (guest instanceof NabiView) return;
+        if (guest instanceof DubuView || guest instanceof KkamangView) { guest.wait(); return; }
+        this.animate({ targets: guest, y: this.seat.y - 1, duration: 1600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+        const id = guest.texture.key.replace('-blink', '');
+        if (guest instanceof AmbientCustomerView) {
+            const tailRange: Record<string, number> = {
+                ambient_kkomi: 1.5, ambient_seol: 2.2, ambient_yeon: 3,
+                ambient_boksil: 2.2, ambient_bamtol: 3.5, ambient_mungchi: 6,
+                ambient_haru: 1.1,
+            };
+            const tailDuration: Record<string, number> = {
+                ambient_kkomi: 1150, ambient_seol: 1050, ambient_yeon: 900,
+                ambient_boksil: 1300, ambient_bamtol: 400, ambient_mungchi: 280,
+                ambient_haru: 2200,
+            };
+            const range = tailRange[id] ?? (this.dog ? 4 : 2.5);
+            this.animate({ targets: guest.tail, angle: -range, duration: tailDuration[id] ?? (this.dog ? 360 : 1000), yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+        } else if (id === 'mongsil') {
+            this.animate({ targets: guest, angle: -1.2, duration: 850, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+        } else if (id === 'kong') {
+            this.animate({ targets: guest, angle: -.6, duration: 1450, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+        }
         const blink = () => this.later(Phaser.Math.Between(2500, 5000), () => {
             if (!this.canWait()) { blink(); return; }
-            const image = this.guest as Phaser.GameObjects.Image, key = image.texture.key.replace('-blink', '');
-            image.setTexture(key + '-blink');
-            this.later(110, () => { image.setTexture(key); blink(); });
+            const key = guest.texture.key.replace('-blink', '');
+            guest.setTexture(key + '-blink');
+            this.later(110, () => { guest.setTexture(key); blink(); });
         });
         blink();
         const action = () => this.later(Phaser.Math.Between(4000, 8000), () => {
             if (!this.canWait()) { action(); return; }
-            // Dogs tilt towards the kitchen; cats give the table a tiny sniff.
-            this.animate({ targets: this.guest, angle: this.dog ? -2 : 1, x: this.seat.x + (this.dog ? 0 : 1), duration: 220, yoyo: true }, action);
+            const moves: Record<string, Phaser.Types.Tweens.TweenBuilderConfig> = {
+                ambient_kkomi: { targets: guest, x: this.seat.x - 1, y: this.seat.y + 1, angle: -1.5, duration: 310, yoyo: true },
+                ambient_seol: { targets: guest, angle: .9, y: this.seat.y - 1, duration: 420, yoyo: true },
+                ambient_yeon: { targets: guest, x: this.seat.x + 1, angle: 2, duration: 250, yoyo: true },
+                ambient_boksil: { targets: guest, scaleX: customerRender.scale + .07, y: this.seat.y - 1, duration: 350, yoyo: true },
+                ambient_bamtol: { targets: guest, angle: 1.6, x: this.seat.x + 1, duration: 190, yoyo: true, repeat: 2 },
+                ambient_mungchi: { targets: guest, angle: -3, x: this.seat.x + 2, y: this.seat.y + 1, duration: 230, yoyo: true, repeat: 1 },
+                ambient_haru: { targets: guest, angle: .7, y: this.seat.y + .5, duration: 520, yoyo: true },
+                kong: { targets: guest, x: this.seat.x + 1, angle: 1.4, duration: 310, yoyo: true },
+                mongsil: { targets: guest, y: this.seat.y - 1.5, scaleY: customerRender.seatedScaleY + .04, duration: 190, yoyo: true, repeat: 1 },
+            };
+            const move = moves[id] ?? { targets: guest, angle: this.dog ? -2 : 1, x: this.seat.x + (this.dog ? 0 : 1), duration: 260, yoyo: true };
+            this.animate({ ...move, ease: 'Sine.easeInOut' }, action);
         });
         action();
     }

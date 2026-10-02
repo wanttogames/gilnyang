@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { KkamangView } from './KkamangView';
 import { DubuView } from './DubuView';
 import { NabiView } from './NabiView';
+import { AmbientCustomerView } from './AmbientCustomerView';
 import type { Quality } from '../types/Recipe';
 
 /** One shared eating sequence; rewards remain the scene's responsibility. */
@@ -15,7 +16,7 @@ export class CustomerMeal {
     private y: number;
     private angle: number;
     private texture?: string;
-    constructor(private scene: Phaser.Scene, private guest: Phaser.GameObjects.Image | NabiView | DubuView | KkamangView,
+    constructor(private scene: Phaser.Scene, private guest: Phaser.GameObjects.Image | NabiView | DubuView | KkamangView | AmbientCustomerView,
         recipeId: string, quality: Quality, quiet: boolean, taste: () => void, complete: () => void, serving?: 'two-eggs') {
         this.x = guest.x; this.y = guest.y; this.angle = guest.angle;
         this.texture = guest instanceof NabiView ? undefined : guest.texture.key.replace('-blink', '');

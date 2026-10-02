@@ -1,4 +1,4 @@
-import { ambientPixels } from '../game/AmbientArt';
+import { ambientBodyPixels, ambientPixels, ambientTailPixels } from '../game/AmbientArt';
 import { ambientById } from '../data/ambientCustomers';
 import Phaser from 'phaser';
 import { characterPixels, dubuPart, kkamangPart, drawPixels, hasCharacterArt, nabiEar, nabiTail, nabiTailLayout } from '../game/CharacterArt';
@@ -13,7 +13,13 @@ export class BootScene extends Phaser.Scene {
                     const g = this.make.graphics({x:0,y:0});
                     drawPixels(g, ambientPixels(ambient, blink));
                     g.generateTexture(c.id + (blink ? '-blink' : ''),48,48); g.destroy();
+                    const body = this.make.graphics({x:0,y:0});
+                    drawPixels(body, ambientBodyPixels(ambient, blink));
+                    body.generateTexture(c.id + '-body' + (blink ? '-blink' : ''),48,48); body.destroy();
                 }
+                const tail = this.make.graphics({x:0,y:0});
+                drawPixels(tail, ambientTailPixels(ambient));
+                tail.generateTexture(c.id + '-tail',48,48); tail.destroy();
                 continue;
             }
             if (hasCharacterArt(c.id)) {
