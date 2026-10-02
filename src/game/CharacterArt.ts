@@ -45,7 +45,7 @@ export function characterPixels(id: RefinedCharacterId, blink = false, bodyOnly 
     }
     if (id === 'kkamang') {
         const fur = 0x363d4d, shadow = 0x222735, rim = 0x606b7a, gold = 0xe4c66c;
-        return [
+        const pixels: Pixel[] = [
             // Close, slender hooked tail; lower head and a long narrow torso.
             [35,22,3,3,rim],[37,24,3,19,fur],[33,42,7,3,fur],[39,28,1,13,rim],
             [15,30,17,15,fur],[14,44,7,3,rim],[26,44,7,3,rim],
@@ -59,6 +59,7 @@ export function characterPixels(id: RefinedCharacterId, blink = false, bodyOnly 
             [17,24,1,blink?0:3,shadow],[30,24,1,blink?0:3,shadow],
             [22,29,3,2,rim],[23,32,2,1,shadow]
         ];
+        return bodyOnly ? pixels.filter((_, i) => i >= 4 && !(i >= 10 && i < 18)) : pixels;
     }
     if (id === 'mongsil') {
         const fur = 0xe8bd83, light = 0xf7e6c6, shade = 0xc79b6c;
@@ -121,6 +122,13 @@ export function characterPixels(id: RefinedCharacterId, blink = false, bodyOnly 
 export function dubuPart(part: 'tail' | 'ears'): Pixel[] {
     const pixels = characterPixels('dubu');
     return part === 'tail' ? pixels.slice(0, 10) : pixels.slice(15, 25);
+}
+export function kkamangPart(part: 'tail-base' | 'tail-tip' | 'ear-left' | 'ear-right'): Pixel[] {
+    const pixels = characterPixels('kkamang');
+    if (part === 'tail-base') return pixels.slice(1, 4);
+    if (part === 'tail-tip') return pixels.slice(0, 1);
+    if (part === 'ear-left') return [...pixels.slice(10, 13), pixels[16]];
+    return [...pixels.slice(13, 16), pixels[17]];
 }
 export function characterPortrait(id: string): string | undefined {
     if (!hasCharacterArt(id)) return;

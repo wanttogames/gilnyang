@@ -1,5 +1,5 @@
 import { CharacterStoryManager } from './CharacterStoryManager';
-import { nabiAfterStoryOrders, nabiPreferenceOrders, dubuAfterStoryOrders } from '../data/characterStories';
+import { nabiAfterStoryOrders, nabiPreferenceOrders, dubuAfterStoryOrders, kkamangAfterStoryOrders } from '../data/characterStories';
 import { rainDialogues } from '../data/rainDialogues';
 import type { Weather } from '../types/Weather';
 import type { Recipe } from '../types/Recipe';
@@ -7,6 +7,15 @@ import { dialogues } from '../data/dialogues';
 import type { CustomerProgress } from '../types/Customer';
 export class DialogueManager {
     static order(id: string, weather: Weather, recipe: Recipe, progress?: CustomerProgress): string {
+        if (id === 'kkamang' && recipe.id === 'ramen') {
+            if (progress?.characterStory?.pending?.eventId === 'KKAMANG_STORY_4') return '오늘은 계란 두 개.';
+            if (progress && CharacterStoryManager.complete(id, progress)) {
+                if (Math.random() < .04) return '여기, 나쁘지 않아.';
+                const pool = [weather === 'rain' ? '비 오네.' : '라면.', ...kkamangAfterStoryOrders];
+                return pool[Math.floor(Math.random() * pool.length)];
+            }
+            return weather === 'rain' ? '비 오네. 라면.' : '라면. 계란은 반숙.';
+        }
         if (id === 'dubu' && progress) {
             const base = weather === 'rain' ? rainDialogues[id].order.replace('{food}', recipe.name) : dialogues[id].order;
             if (CharacterStoryManager.complete(id, progress)) {

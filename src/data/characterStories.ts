@@ -44,9 +44,32 @@ export const characterStories: Record<string, CharacterStoryEvent[]> = {
         { id: 'DUBU_STORY_COMPLETE', title: '이번엔 여기 둘래요', minVisits: 13, minIntimacy: 24, visitsSincePrevious: 3, arrival: { item: 'stone' },
           before: [chef('오늘도 가져왔네.'), guest('네!', 'smile'), guest('...근데 이건 집에 안 가져갈래요.'), chef('왜?'), guest('여기 둘래요.'), chef('왜 여기?'), guest('여기도 제가 좋아하는 곳이니까요!', 'smile')], after: [],
           summary: '작은 돌을 식당에 놓고 간 두부. 이 식당도 두부가 좋아하는 곳이 되었어요.' }
+    ],
+    kkamang: [
+        { id: 'KKAMANG_STORY_1', title: '비 오는 밤의 손님', minVisits: 4, minIntimacy: 5, visitsSincePrevious: 0, requiredRecipe: 'ramen', preferRain: { fallbackVisits: 3 },
+          before: [guest('라면.'), chef('...어서 와.'), guest('계란은 반숙.')], after: [],
+          summary: '짧은 주문, 정확한 취향. 까망은 처음 온 곳처럼 행동하지 않았어요.' },
+        { id: 'KKAMANG_STORY_2', title: '의자가 바뀌었네', minVisits: 6, minIntimacy: 8, visitsSincePrevious: 2, requiredRecipe: 'ramen',
+          before: [{ ...guest('...의자가 바뀌었네.', 'quiet'), gaze: 'chair' }, chef('응?'), guest('...', 'quiet', 250), chef('전에 와본 적 있어?'), guest('착각했어.', 'shy', 350)], after: [],
+          summary: '의자를 보며 흘린 한마디. 전에 와본 적 있냐는 질문에는 착각했다고 했어요.' },
+        { id: 'KKAMANG_STORY_3', title: '냄비', minVisits: 8, minIntimacy: 12, visitsSincePrevious: 2, requiredRecipe: 'ramen', revealsPreference: true,
+          before: [{ ...guest('그 냄비...', 'quiet'), gaze: 'pot' }, chef('왜?'), guest('아직 쓰는구나.', 'quiet'), chef('아직?'), guest('국물은 조금 더.'), guest('...라면이나 줘.', 'normal', 400)], after: [],
+          summary: '주방의 냄비를 알아보는 듯한 까망. 물어보니 라면 이야기로 돌렸어요.' },
+        { id: 'KKAMANG_STORY_4', title: '계란 두 개', minVisits: 10, minIntimacy: 16, visitsSincePrevious: 2, requiredRecipe: 'ramen', serving: 'two-eggs',
+          before: [guest('오늘은 계란 두 개.', 'quiet'), chef('두 개?'), guest('...응.', 'quiet')],
+          after: [guest('...비슷하네.', 'quiet', 350), chef('뭐가?'), guest('...아무것도.', 'quiet', 300)],
+          summary: '계란 두 개를 부탁한 밤. 라면을 먹고 무언가와 비슷하다고 했지만, 더 말하지 않았어요.' },
+        { id: 'KKAMANG_STORY_5', title: '예전보다 조용해졌네', minVisits: 13, minIntimacy: 22, visitsSincePrevious: 3, requiredRecipe: 'ramen', preferRain: { fallbackVisits: 2 }, arrival: { quiet: true },
+          before: [{ ...guest('...예전보다 조용해졌네.', 'quiet'), gaze: 'street' }, chef('예전?'), guest('...', 'quiet', 350), chef('까망.'), guest('오늘은 그냥 먹고 갈게.', 'quiet')], after: [],
+          summary: '주변을 살피던 까망이 예전보다 조용해졌다고 했어요. 그 밤엔 그냥 먹고 가겠다고 했어요.' },
+        { id: 'KKAMANG_STORY_COMPLETE', title: '아직은', minVisits: 16, minIntimacy: 28, visitsSincePrevious: 3, requiredRecipe: 'ramen',
+          before: [], after: [guest('너 궁금하지.'), chef('뭐가?'), guest('내가 왜 여기 얘기를 아는지.', 'quiet'), { ...chef('...조금.'), pause: 350 }, guest('아직은 말 안 할래.', 'quiet'), chef('왜?'), guest('조금 더 있어 보고 싶어서.'), chef('뭘?'), { ...guest('...', 'quiet', 300), gaze: 'pot' }, guest('라면은 괜찮네.')],
+          summary: '과거를 알고 있지만 아직 말하지 않는 까망. 조금 더 이 식당을 지켜보고 싶다고 해요.' }
     ]
 };
 export const nabiAfterStoryOrders = ['오늘도 김 많이요.', '밖에 조금 추워졌어요. 따뜻한 주먹밥 부탁해요.', '참치 주먹밥 하나요. 오늘은 여기 좀 오래 있어도 돼요?'];
 export const nabiPreferenceOrders = ['오늘도 참치 주먹밥이요. 김은 조금 넉넉하게요.', '그 바삭한 김이 좋아요. 주먹밥 하나 부탁해요.'];
 
 export const dubuAfterStoryOrders = ['오늘은 뭐 없나 찾아보고 왔어요!', '저번에 둔 돌 아직 있어요?', '어묵 국물 많이요!'];
+
+export const kkamangAfterStoryOrders = ['오늘은 조용하네.', '계란은 하나.', '...왜 그렇게 봐.', '라면 줘.'];

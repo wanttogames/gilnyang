@@ -42,4 +42,31 @@ for (let stage=1;stage<6;stage++) {
  p.visitCount=e.minVisits-1;assert.equal(M.reserve('dubu',p,5).id,e.id);
  M.advance('dubu',p);S.save(s);const restored=S.load();assert.equal(restored.customers.dubu.characterStory.pending.line,1);
 }
-console.log('PASS Nabi/Dubu: migration, gates, cursor persistence, split ending, ordered six stages, no repeat, legacy progress preserved; Kong legacy unlock unchanged');
+// Kkamang's recipe/weather gates never change the other arcs or saved cursors.
+const rain={weather:'rain',unlockedRecipes:['rice','oden','milk','ramen']},clear={...rain,weather:'clear'};
+s=newSave();p=s.customers.kkamang;p.visitCount=3;p.intimacy=5;
+assert.equal(M.reserve('kkamang',p,4,{weather:'rain',unlockedRecipes:['rice','oden','milk']}),undefined);
+assert.equal(M.reserve('kkamang',p,4,clear),undefined);
+assert.equal(M.reserve('kkamang',p,4,rain).id,'KKAMANG_STORY_1');
+M.advance('kkamang',p);S.save(s);s=S.load();p=s.customers.kkamang;
+assert.equal(p.characterStory.pending.line,1);
+assert.equal(M.reserve('kkamang',p,4,clear).id,'KKAMANG_STORY_1');
+while(p.characterStory.pending)M.advance('kkamang',p);
+assert.equal(M.reserve('kkamang',p,4,rain),undefined);
+p.visitCount=4;assert.equal(M.reserve('kkamang',p,5,rain),undefined);
+p.visitCount=5;p.intimacy=8;assert.equal(M.reserve('kkamang',p,5,rain).id,'KKAMANG_STORY_2');
+s=newSave();p=s.customers.kkamang;p.visitCount=5;p.intimacy=10;assert.equal(M.reserve('kkamang',p,6,clear),undefined);p.visitCount=6;assert.equal(M.reserve('kkamang',p,7,clear).id,'KKAMANG_STORY_1');
+// Event 5: weather can delay two eligible visits, but cannot permanently block the arc.
+s=newSave();p=s.customers.kkamang;p.intimacy=30;p.visitCount=12;p.characterStory={stage:4,lastEventVisit:10,lastEventNight:8};
+assert.equal(M.reserve('kkamang',p,9,clear),undefined);assert.equal(M.reserve('kkamang',p,9,rain).id,'KKAMANG_STORY_5');delete p.characterStory.pending;p.visitCount=14;assert.equal(M.reserve('kkamang',p,9,clear).id,'KKAMANG_STORY_5');
+// Ordered events and two-part egg order; high affinity never skips the sequence.
+s=newSave();p=s.customers.kkamang;p.intimacy=200;p.visitCount=40;
+for(let stage=0;stage<6;stage++){
+ const e=M.reserve('kkamang',p,stage+1,rain);assert.equal(e,M.events('kkamang')[stage]);
+ if(stage===3){assert.equal(e.serving,'two-eggs');while(p.characterStory.pending.part==='before')M.advance('kkamang',p);assert.equal(p.characterStory.stage,3);S.save(s);s=S.load();p=s.customers.kkamang;assert.equal(p.characterStory.pending.part,'after')}
+ while(p.characterStory.pending)M.advance('kkamang',p);
+ assert.equal(p.characterStory.stage,stage+1);assert.equal(M.reserve('kkamang',p,stage+1,rain),undefined);p.visitCount+=3;S.save(s);s=S.load();p=s.customers.kkamang;
+}
+assert(M.complete('kkamang',p));assert.equal(M.reserve('kkamang',p,20,rain),undefined);
+for(const version of [1,2]){s=newSave();s.version=version;s.gold=777;s.weather='snow';s.night=25;s.unlockedRecipes=['rice','oden','milk','ramen','bread'];s.customers.kkamang={intimacy:80,visitCount:45,storyStage:3,preferenceFound:true,unlocked:true};s.customers.nabi.characterStory.stage=6;s.customers.dubu.characterStory.stage=4;stored=JSON.stringify(s);const v=S.load();assert.equal(v.gold,777);assert.equal(v.weather,'snow');assert.equal(v.customers.kkamang.intimacy,80);assert.equal(v.customers.kkamang.visitCount,45);assert.equal(v.customers.kkamang.storyStage,3);assert.equal(v.customers.kkamang.characterStory.stage,0);assert.equal(v.customers.nabi.characterStory.stage,6);assert.equal(v.customers.dubu.characterStory.stage,4);assert.deepEqual(D.unlock('kkamang',v.customers.kkamang),[])}
+console.log('PASS Nabi/Dubu/Kkamang: migration, gates, rain preference/fallback, recipe lock, cursor persistence, split order, ordered six events, no repeat, legacy data preserved; Kong legacy unlock unchanged');

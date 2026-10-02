@@ -1,6 +1,6 @@
 export type StoryEmotion = 'normal' | 'shy' | 'quiet' | 'smile';
 export type StoryPart = 'before' | 'after';
-export interface StoryLine { speaker: 'guest' | 'chef'; text: string; emotion?: StoryEmotion; pause?: number }
+export interface StoryLine { speaker: 'guest' | 'chef'; text: string; emotion?: StoryEmotion; pause?: number; gaze?: 'chair' | 'pot' | 'street' }
 export interface CharacterStoryEvent {
     id: string;
     title: string;
@@ -11,6 +11,9 @@ export interface CharacterStoryEvent {
     after: StoryLine[];
     summary: string;
     revealsPreference?: boolean;
+    requiredRecipe?: string;
+    preferRain?: { fallbackVisits: number };
+    serving?: 'two-eggs';
     arrival?: { item?: 'button' | 'cap' | 'stone'; quiet?: boolean };
 }
 export interface CharacterStoryProgress {

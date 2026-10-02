@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { KkamangView } from './KkamangView';
 import { DubuView } from './DubuView';
 import { NabiView } from './NabiView';
 import type { Quality } from '../types/Recipe';
@@ -14,16 +15,17 @@ export class CustomerMeal {
     private y: number;
     private angle: number;
     private texture?: string;
-    constructor(private scene: Phaser.Scene, private guest: Phaser.GameObjects.Image | NabiView | DubuView,
-        recipeId: string, quality: Quality, quiet: boolean, taste: () => void, complete: () => void) {
+    constructor(private scene: Phaser.Scene, private guest: Phaser.GameObjects.Image | NabiView | DubuView | KkamangView,
+        recipeId: string, quality: Quality, quiet: boolean, taste: () => void, complete: () => void, serving?: 'two-eggs') {
         this.x = guest.x; this.y = guest.y; this.angle = guest.angle;
         this.texture = guest instanceof NabiView ? undefined : guest.texture.key.replace('-blink', '');
         this.paused = scene.tweens.getTweensOf(guest).filter(tween => tween.isPlaying());
         this.paused.forEach(tween => tween.pause());
-        if (guest instanceof NabiView || guest instanceof DubuView) guest.beginEating();
+        if (guest instanceof NabiView || guest instanceof DubuView || guest instanceof KkamangView) guest.beginEating();
         scene.events.once(Phaser.Scenes.Events.SHUTDOWN, this.cleanup, this);
         const plate = scene.add.ellipse(326, 778, 58, 13, 0xe7cda5).setDepth(2.5).setName('meal-plate');
-        const food = scene.add.image(326, 752, 'meal-' + recipeId).setScale(2).setDepth(2.6).setName('served-food');
+        const food = scene.add.image(326, 752, 'meal-' + (recipeId === 'ramen' && serving === 'two-eggs' ? 'ramen-two-eggs' : recipeId)).setScale(2).setDepth(2.6).setName('served-food');
+        food.setData('serving', serving ?? 'normal');
         this.objects.add(plate); this.objects.add(food);
         this.animate({ targets: food, y: 768, duration: 260, ease: 'Sine.easeOut' });
         // A few wisps for warm food, restrained on rice/bread.
@@ -33,19 +35,20 @@ export class CustomerMeal {
             this.animate({ targets: steam, y: 722, x: steam.x + 4, alpha: 0, duration: 1200, delay: i * 240 });
         }
         this.later(350, () => this.animate({ targets: guest, x: this.x + 1, angle: this.angle + 1, duration: 200 }));
-        this.later(600, () => this.animate({ targets: guest, x: this.x + 3, y: this.y + 1, duration: 160, yoyo: true, repeat: 1 }));
+        this.later(600, () => this.animate({ targets: guest, x: this.x + (guest instanceof KkamangView ? 1 : 3), y: this.y + (guest instanceof KkamangView ? .5 : 1), duration: 160, yoyo: true, repeat: 1 }));
         this.later(1250, () => {
-            this.animate({ targets: guest, x: this.x + 4, y: this.y + 2, duration: 160, yoyo: true });
+            this.animate({ targets: guest, x: this.x + (guest instanceof KkamangView ? 2 : 4), y: this.y + (guest instanceof KkamangView ? 1 : 2), duration: 160, yoyo: true });
             this.animate({ targets: food, scale: 1.5, alpha: .8, duration: 200 });
         });
         this.later(quality === '완벽' ? 1800 : 1550, () => {
             this.restore();
+            if (quiet && guest instanceof KkamangView && serving === 'two-eggs') taste();
             if (!quiet) {
                 taste();
                 if (!(guest instanceof NabiView)) {
-                    this.animate({ targets: guest, y: this.y + (this.texture === 'kkamang' ? 0 : quality === '완벽' ? -2 : 1), angle: this.angle + (quality === '보통' ? (this.texture === 'kkamang' ? .5 : 2) : 0), duration: 160, yoyo: true });
+                    if (!(guest instanceof KkamangView)) this.animate({ targets: guest, y: this.y + (this.texture === 'kkamang' ? 0 : quality === '완벽' ? -2 : 1), angle: this.angle + (quality === '보통' ? (this.texture === 'kkamang' ? .5 : 2) : 0), duration: 160, yoyo: true });
                     if (quality !== '보통') {
-                        guest.setTexture(this.texture!.replace('-blink', '') + '-blink');
+                        if (!(guest instanceof KkamangView)) guest.setTexture(this.texture!.replace('-blink', '') + '-blink');
                         for (let i = 0; i < (this.texture === 'kkamang' ? 1 : quality === '완벽' ? 3 : 2); i++) {
                             const star = scene.add.image(this.x - 28 + i * 25, this.y - 50, 'nabi-spark').setScale(1.5).setDepth(3).setName('meal-spark');
                             this.objects.add(star);
@@ -68,7 +71,7 @@ export class CustomerMeal {
     private restore() {
         if (!this.guest.active) return;
         this.guest.setPosition(this.x, this.y).setAngle(this.angle);
-        if (this.guest instanceof NabiView || this.guest instanceof DubuView) this.guest.endEating();
+        if (this.guest instanceof NabiView || this.guest instanceof DubuView || this.guest instanceof KkamangView) this.guest.endEating();
         else if (this.texture) this.guest.setTexture(this.texture);
     }
     cleanup() {

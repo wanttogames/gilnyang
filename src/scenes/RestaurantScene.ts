@@ -2,6 +2,7 @@ import { customerRender } from '../game/CharacterArt';
 import { CustomerVisit } from '../game/CustomerVisit';
 import { RestaurantEnvironment } from '../game/RestaurantEnvironment';
 import { CustomerMeal } from '../game/CustomerMeal';
+import { KkamangView } from '../game/KkamangView';
 import { DubuView } from '../game/DubuView';
 import { NabiView } from '../game/NabiView';
 import { customerById } from '../data/customers';
@@ -31,7 +32,7 @@ import type { Customer } from '../types/Customer';
 import type { Quality } from '../types/Recipe';
 export class RestaurantScene extends Phaser.Scene {
     save!: SaveData;
-    guest?: Phaser.GameObjects.Image | NabiView | DubuView;
+    guest?: Phaser.GameObjects.Image | NabiView | DubuView | KkamangView;
     chef!: Phaser.GameObjects.Image;
     phase: 'closed' | 'arriving' | 'seating' | 'waiting' | 'order' | 'cooking' | 'ready' | 'eating' | 'reaction' | 'transition' | 'character-story' | 'standing' | 'farewell' | 'leaving' | 'gap' | 'result' = 'closed';
     current?: Customer;
@@ -75,7 +76,7 @@ export class RestaurantScene extends Phaser.Scene {
             this.guestVisit?.cleanup();
             this.guestGap?.remove(false);
             this.environment.cleanup();
-            (this.guest instanceof NabiView || this.guest instanceof DubuView) && this.guest.cleanup();
+            (this.guest instanceof NabiView || this.guest instanceof DubuView || this.guest instanceof KkamangView) && this.guest.cleanup();
             window.removeEventListener('pagehide', this.saveOnHide);
             this.lockGuestInput(false);
         });
@@ -286,8 +287,8 @@ export class RestaurantScene extends Phaser.Scene {
         this.guestVisit?.cleanup(); this.guest?.destroy();
         panel(`<div class="eyebrow">${this.save.activeNight!.report.served + 1} / 5 · 오늘의 손님</div><h2>작은 발걸음이 들려요</h2><p class="muted">누가 찾아왔을까요?</p><div class="waiting"><i></i><i></i><i></i></div>`);
         $('caption').textContent = this.save.weather === 'rain' ? '젖은 발걸음이 작은 지붕 아래로 들어와요.' : weatherDefinitions[this.save.weather].caption;
-        if (c.id === 'dubu') {
-            CharacterStoryManager.reserve(c.id, this.save.customers[c.id], this.save.night);
+        if (c.id === 'dubu' || c.id === 'kkamang') {
+            CharacterStoryManager.reserve(c.id, this.save.customers[c.id], this.save.night, this.save);
             SaveManager.save(this.save);
         }
         this.guest = this.createGuest(c.id, CustomerVisit.entrance.x, CustomerVisit.entrance.y);
@@ -299,7 +300,7 @@ export class RestaurantScene extends Phaser.Scene {
             if (this.guest instanceof DubuView) this.guest.seated();
             this.guestVisit!.wait();
             p.unlocked = true; audio.note(330, .2);
-            CharacterStoryManager.reserve(c.id, p, this.save.night);
+            CharacterStoryManager.reserve(c.id, p, this.save.night, this.save);
             SaveManager.save(this.save);
         }, () => {
             if (this.phase !== 'waiting' || !this.guest?.active) return;
@@ -307,7 +308,7 @@ export class RestaurantScene extends Phaser.Scene {
             this.playCharacterStory('before', () => this.order());
         });
     }
-    order() { if (!['waiting', 'character-story'].includes(this.phase)) return; this.phase = 'order'; this.guestVisit?.wait(); this.lockGuestInput(false); const c = this.current!, r = this.currentRecipe = RecipeManager.order(c, this.save), p = this.save.customers[c.id]; panel(`<div class="eyebrow">${this.save.activeNight!.report.served + 1} / 5 · 손님이 기다려요</div><div class="order-row"><div><h2>${c.name} <small>${c.species}</small></h2><p class="quote">“${DialogueManager.order(c.id, this.save.weather, r, p)}”</p></div>${food(r.id)}</div><div class="order-bottom"><div><small>오늘의 주문</small><strong>${r.name}</strong></div><button class="primary" id="cook">요리 시작 ${icon('arrow')}</button></div>${p.preferenceFound ? `<p class="preference">기억해 주세요 · ${ingredients[c.favoriteIngredients[0]].name}${c.favoriteIngredients[0] === 'warm' ? '' : ' 넉넉하게'}</p>` : ''}`); on('cook', () => { if (this.phase !== 'order') return; this.phase = 'cooking'; audio.note(440); new CookingScene(r, !!this.save.upgrades.pot, (quality, extra) => this.ready(quality, extra)); }); }
+    order() { if (!['waiting', 'character-story'].includes(this.phase)) return; this.phase = 'order'; this.guestVisit?.wait(); this.lockGuestInput(false); const c = this.current!, r = this.currentRecipe = RecipeManager.order(c, this.save), p = this.save.customers[c.id]; panel(`<div class="eyebrow">${this.save.activeNight!.report.served + 1} / 5 · 손님이 기다려요</div><div class="order-row"><div><h2>${c.name} <small>${c.species}</small></h2><p class="quote">“${DialogueManager.order(c.id, this.save.weather, r, p)}”</p></div>${food(r.id)}</div><div class="order-bottom"><div><small>오늘의 주문</small><strong>${r.name}</strong></div><button class="primary" id="cook">요리 시작 ${icon('arrow')}</button></div>${p.characterStory?.pending?.eventId === 'KKAMANG_STORY_4' ? '<p class="preference">오늘만 · 계란 두 개를 부탁했어요</p>' : ''}${p.preferenceFound ? `<p class="preference">기억해 주세요 · ${ingredients[c.favoriteIngredients[0]].name}${c.favoriteIngredients[0] === 'warm' ? '' : ' 넉넉하게'}</p>` : ''}`); on('cook', () => { if (this.phase !== 'order') return; this.phase = 'cooking'; audio.note(440); new CookingScene(r, !!this.save.upgrades.pot, (quality, extra) => this.ready(quality, extra)); }); }
     ready(q: Quality, extra: string) { this.phase = 'ready'; audio.success(); this.tweens.add({ targets: this.chef, angle: 5, duration: 140, yoyo: true, repeat: 3 }); panel(`<div class="eyebrow">정성을 담은 한 접시</div><div class="ready-row">${food(this.currentRecipe!.id)}<div><span class="quality q-${q === '완벽' ? 'perfect' : 'good'}">${q === '완벽' ? 'PERFECT · ' : ''}${q}</span><h2>${this.currentRecipe!.name}</h2><p class="muted">${extra ? ingredients[extra].name + '도 마음을 담아' : '따뜻할 때 전해 주세요.'}</p></div></div><button id="serve" class="primary">${this.current!.name}에게 음식 건네기 →</button>`); on('serve', () => this.serve(q, extra)); }
     private get guestInputLocked() { return ['arriving', 'seating', 'waiting', 'eating', 'standing', 'farewell', 'leaving', 'gap', 'transition'].includes(this.phase); }
     private lockGuestInput(locked: boolean) {
@@ -319,13 +320,13 @@ export class RestaurantScene extends Phaser.Scene {
         this.phase = 'eating';
         this.lockGuestInput(true);
         const c = this.current!, p = this.save.customers[c.id];
-        const quiet = CharacterStoryManager.pendingEvent(c.id, p)?.after.some(line => line.emotion === 'quiet') ?? false;
+        const quiet = (CharacterStoryManager.pendingEvent(c.id, p)?.after.some(line => line.emotion === 'quiet') ?? false) || (this.guest instanceof KkamangView && this.guest.quietArrival);
         this.quietDeparture = quiet;
         const favorite = p.preferenceFound && extra === c.favoriteIngredients[0];
         panel(`<div class="eyebrow">따뜻할 때, 천천히</div><h2>${c.name}의 한입</h2><p class="muted">${this.currentRecipe!.name} · 잠깐 쉬어 가요.</p><div class="waiting"><i></i><i></i><i></i></div>`);
         this.customerMeal = new CustomerMeal(this, this.guest, this.currentRecipe!.id, q, quiet,
-            () => { if (this.guest instanceof NabiView) this.guest.taste(q, favorite, p.intimacy, p.characterStory?.stage ?? 0); else if (this.guest instanceof DubuView) this.guest.taste(q); },
-            () => { this.customerMeal = undefined; if (this.phase === 'eating') this.finishServing(q, extra, quiet); });
+            () => { if (this.guest instanceof NabiView) this.guest.taste(q, favorite, p.intimacy, p.characterStory?.stage ?? 0); else if (this.guest instanceof DubuView) this.guest.taste(q); else if (this.guest instanceof KkamangView) this.guest.taste(q, CharacterStoryManager.pendingEvent(c.id, p)?.serving === 'two-eggs'); },
+            () => { this.customerMeal = undefined; if (this.phase === 'eating') this.finishServing(q, extra, quiet); }, CharacterStoryManager.pendingEvent(c.id, p)?.serving);
     }
     private finishServing(q: Quality, extra: string, quiet: boolean) {
         this.phase = 'reaction';
@@ -358,7 +359,7 @@ export class RestaurantScene extends Phaser.Scene {
         if (!pending || pending.part !== part || !event || !event[part].length) { next(); return; }
         this.guestVisit?.pauseWaiting();
         this.phase = 'character-story';
-        if (this.guest instanceof NabiView || this.guest instanceof DubuView) this.guest.beginStory();
+        if (this.guest instanceof NabiView || this.guest instanceof DubuView || this.guest instanceof KkamangView) this.guest.beginStory();
         else this.tweens.getTweensOf(this.guest!).forEach(tween => tween.pause());
         $('caption').textContent = this.save.weather === 'rain' ? '빗소리 사이로, 작은 이야기를 들어요.' : '작은 지붕 아래, 잠깐의 이야기.';
         new StoryDialogue(event, part, () => p.characterStory!.pending!.line, () => {
@@ -373,7 +374,7 @@ export class RestaurantScene extends Phaser.Scene {
             return finishedPart;
         }, c.name, line => this.storyExpression(line), () => {
             if (this.guest instanceof NabiView) this.guest.endStory(p.intimacy, p.characterStory?.stage ?? 0);
-            else if (this.guest instanceof DubuView) this.guest.endStory();
+            else if (this.guest instanceof DubuView || this.guest instanceof KkamangView) this.guest.endStory();
             else if (this.guest) {
                 this.guest.setTexture(c.id).setAngle(0).setScale(customerRender.scale).setY(CustomerVisit.seat.y);
                 this.tweens.getTweensOf(this.guest).forEach(tween => tween.resume());
@@ -383,7 +384,7 @@ export class RestaurantScene extends Phaser.Scene {
     }
     private storyExpression(line: StoryLine) {
         if (line.speaker === 'guest') this.quietDeparture = line.emotion === 'quiet';
-        if (this.guest instanceof NabiView || this.guest instanceof DubuView) { this.guest.storyLine(line); return; }
+        if (this.guest instanceof NabiView || this.guest instanceof DubuView || this.guest instanceof KkamangView) { this.guest.storyLine(line); return; }
         if (!this.guest || line.speaker !== 'guest') return;
         const emotion = line.emotion ?? 'normal';
         this.guest.setTexture(this.current!.id + (emotion === 'smile' ? '-blink' : ''));
@@ -412,7 +413,13 @@ export class RestaurantScene extends Phaser.Scene {
         if (!this.children.getByName('dubu-keepsake-stone')) this.add.image(365, 774, 'dubu-item-stone').setScale(2).setDepth(2.4).setName('dubu-keepsake-stone');
         if (this.guest instanceof DubuView && this.guest.active) this.guest.leaveStone();
     }
-    private createGuest(id: string, x: number, y: number) { return id === 'nabi' ? new NabiView(this, x, y) : id === 'dubu' ? new DubuView(this, x, y, CharacterStoryManager.pendingEvent(id, this.save.customers[id])) : this.add.image(x, y, id).setOrigin(.5, .5).setScale(customerRender.scale).setDepth(2); }
+    private createGuest(id: string, x: number, y: number) {
+        if (id === 'nabi') return new NabiView(this, x, y);
+        const event = CharacterStoryManager.pendingEvent(id, this.save.customers[id]);
+        if (id === 'dubu') return new DubuView(this, x, y, event);
+        if (id === 'kkamang') return new KkamangView(this, x, y, event, this.save.weather === 'rain');
+        return this.add.image(x, y, id).setOrigin(.5, .5).setScale(customerRender.scale).setDepth(2);
+    }
     private createVisit() { return new CustomerVisit(this, this.guest!, !!this.current!.dog, () => ['waiting', 'order', 'cooking', 'ready', 'reaction'].includes(this.phase)); }
     depart() {
         if (!this.guest?.active || ['standing', 'farewell', 'leaving', 'gap'].includes(this.phase)) return;
@@ -423,7 +430,7 @@ export class RestaurantScene extends Phaser.Scene {
         panel('<div class="eyebrow">또 만나요</div><h2>다음 밤에도 기다릴게요.</h2><p class="muted">골목에 따뜻한 기억 하나가 남았어요.</p>');
         visit.leave(p.intimacy, complete, this.quietDeparture,
             () => { this.phase = 'standing'; }, () => { this.phase = 'farewell'; }, () => { this.phase = 'leaving'; }, () => {
-                if (guest instanceof NabiView || guest instanceof DubuView) guest.cleanup();
+                if (guest instanceof NabiView || guest instanceof DubuView || guest instanceof KkamangView) guest.cleanup();
                 guest.destroy(); this.guest = undefined; this.guestVisit = undefined;
                 this.phase = 'gap';
                 this.guestGap = this.time.delayedCall(400, () => {

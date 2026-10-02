@@ -1,12 +1,12 @@
 import Phaser from 'phaser';
-import { characterPixels, dubuPart, drawPixels, hasCharacterArt, nabiEar, nabiTail, nabiTailLayout } from '../game/CharacterArt';
+import { characterPixels, dubuPart, kkamangPart, drawPixels, hasCharacterArt, nabiEar, nabiTail, nabiTailLayout } from '../game/CharacterArt';
 import { customers } from '../data/customers';
 export class BootScene extends Phaser.Scene {
     constructor() { super('Boot'); }
     create() {
         for (const c of [{ id: 'chef', color: 0xd6c6b6, accent: 0x918275, dog: false }, ...customers]) {
             if (hasCharacterArt(c.id)) {
-                for (const layer of c.id === 'nabi' || c.id === 'dubu' ? ['', '-body'] : ['']) {
+                for (const layer of c.id === 'nabi' || c.id === 'dubu' || c.id === 'kkamang' ? ['', '-body'] : ['']) {
                     for (const blink of [false, true]) {
                         const g = this.make.graphics({ x: 0, y: 0 });
                         drawPixels(g, characterPixels(c.id, blink, layer === '-body'));
@@ -16,7 +16,7 @@ export class BootScene extends Phaser.Scene {
                 }
                 continue;
             }
-            for (const layer of c.id === 'nabi' || c.id === 'dubu' ? ['', '-body'] : ['']) {
+            for (const layer of c.id === 'nabi' || c.id === 'dubu' || c.id === 'kkamang' ? ['', '-body'] : ['']) {
                 for (const blink of [false, true]) {
                     const g = this.make.graphics({ x: 0, y: 0 });
                     const rect = (x: number, y: number, w: number, h: number, color: number) => { g.fillStyle(color); g.fillRect(x, y, w, h); };
@@ -56,6 +56,11 @@ export class BootScene extends Phaser.Scene {
                 }
             }
         }
+        for (const part of ['tail-base', 'tail-tip', 'ear-left', 'ear-right'] as const) {
+            const g = this.make.graphics({ x: 0, y: 0 });
+            drawPixels(g, kkamangPart(part));
+            g.generateTexture('kkamang-' + part, 48, 48); g.destroy();
+        }
         for (const part of ['tail', 'ears'] as const) {
             const g = this.make.graphics({ x: 0, y: 0 });
             drawPixels(g, dubuPart(part));
@@ -90,7 +95,7 @@ export class BootScene extends Phaser.Scene {
         spark.generateTexture('nabi-spark', 8, 8);
         spark.destroy();
         // Tiny food textures, replaceable with artwork without changing serving logic.
-        for (const id of ['rice', 'oden', 'milk', 'ramen', 'bread']) {
+        for (const id of ['rice', 'oden', 'milk', 'ramen', 'ramen-two-eggs', 'bread']) {
             const g = this.make.graphics({ x: 0, y: 0 });
             const rect = (x: number, y: number, w: number, h: number, color: number) => { g.fillStyle(color).fillRect(x, y, w, h); };
             if (id === 'rice') {
@@ -103,6 +108,10 @@ export class BootScene extends Phaser.Scene {
                 rect(1, 7, 18, 3, 0xf0d9ad); rect(3, 10, 14, 5, 0xb87654); rect(3, 7, 14, 2, 0xc79454);
                 if (id === 'oden') { rect(4, 4, 4, 5, 0xe1b36c); rect(10, 3, 5, 5, 0xe6c68b); }
                 else { rect(5, 5, 10, 3, 0xefc988); rect(11, 4, 4, 4, 0xf2e1b7); rect(12, 5, 2, 2, 0xe3b452); }
+            }
+            if (id === 'ramen-two-eggs') {
+                rect(4, 4, 5, 4, 0xf2e1b7); rect(5, 5, 2, 2, 0xe3b452);
+                rect(11, 4, 5, 4, 0xf2e1b7); rect(12, 5, 2, 2, 0xe3b452);
             }
             g.generateTexture('meal-' + id, 20, 16); g.destroy();
         }

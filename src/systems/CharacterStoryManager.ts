@@ -1,5 +1,6 @@
 import { characterStories } from '../data/characterStories';
 import type { CharacterStoryProgress } from '../types/CharacterStory';
+import type { Weather } from '../types/Weather';
 import type { CustomerProgress } from '../types/Customer';
 
 const emptyProgress = (): CharacterStoryProgress => ({ stage: 0, lastEventVisit: 0, lastEventNight: 0 });
@@ -8,13 +9,16 @@ export class CharacterStoryManager {
     static progress(p: CustomerProgress) { return p.characterStory ??= emptyProgress(); }
     static complete(id: string, p: CustomerProgress) { const count = this.events(id).length; return count > 0 && (p.characterStory?.stage ?? 0) >= count; }
     static pendingEvent(id: string, p: CustomerProgress) { return this.events(id).find(e => e.id === p.characterStory?.pending?.eventId); }
-    static reserve(id: string, p: CustomerProgress, night: number) {
+    static reserve(id: string, p: CustomerProgress, night: number, context?: { weather: Weather; unlockedRecipes: string[] }) {
         if (!this.events(id).length) return undefined;
         const progress = this.progress(p);
         if (progress.pending) return this.pendingEvent(id, p);
         const event = this.events(id)[progress.stage], visit = p.visitCount + 1;
         // Completed visits and elapsed nights both matter, even for old high-intimacy saves.
         if (!event || progress.lastEventVisit >= visit || (progress.stage > 0 && night <= progress.lastEventNight) || visit < event.minVisits || p.intimacy < event.minIntimacy || (progress.stage > 0 && visit - progress.lastEventVisit < event.visitsSincePrevious)) return undefined;
+        if (event.requiredRecipe && !context?.unlockedRecipes.includes(event.requiredRecipe)) return undefined;
+        const eligibleVisit = Math.max(event.minVisits, progress.lastEventVisit + event.visitsSincePrevious);
+        if (event.preferRain && context?.weather !== 'rain' && visit < eligibleVisit + event.preferRain.fallbackVisits) return undefined;
         progress.pending = { eventId: event.id, visit, night, part: event.before.length ? 'before' : 'after', line: 0 };
         return event;
     }
