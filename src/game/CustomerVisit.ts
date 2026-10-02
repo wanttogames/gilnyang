@@ -1,3 +1,4 @@
+import { DongguView } from './DongguView';
 import Phaser from 'phaser';
 import { customerRender, customerShadowWidth } from './CharacterArt';
 import { KkamangView } from './KkamangView';
@@ -18,7 +19,7 @@ export class CustomerVisit {
     private waiting = false;
     private cleaned = false;
     private departing = false;
-    constructor(private scene: Phaser.Scene, private guest: Phaser.GameObjects.Image | NabiView | DubuView | KkamangView | AmbientCustomerView,
+    constructor(private scene: Phaser.Scene, private guest: DongguView | Phaser.GameObjects.Image | NabiView | DubuView | KkamangView | AmbientCustomerView,
         private dog: boolean, private canWait: () => boolean,
         private seat = CustomerVisit.seat) {
         const id = guest instanceof NabiView ? 'nabi' : guest.texture.key.replace('-blink', '');
@@ -82,7 +83,17 @@ export class CustomerVisit {
         // Main story guests own their own idle animation controller.
         if (guest instanceof NabiView) return;
         if (guest instanceof DubuView || guest instanceof KkamangView) { guest.wait(); return; }
-        this.animate({ targets: guest, y: this.seat.y - 1, duration: 1600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+        if (guest instanceof DongguView) {
+            // Compensate y for breathing so the paws remain on the ground.
+            const breath = .02;
+            this.animate({ targets: guest, scaleY: customerRender.seatedScaleY + breath,
+                y: this.seat.y - (customerRender.footY - customerRender.centre) * breath,
+                duration: 2300, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+            guest.tail.setAngle(-2);
+            this.animate({ targets: guest.tail, angle: 2, duration: 1800, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+        } else {
+            this.animate({ targets: guest, y: this.seat.y - 1, duration: 1600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+        }
         const id = guest.texture.key.replace('-blink', '');
         if (guest instanceof AmbientCustomerView) {
             const tailRange: Record<string, number> = {
@@ -111,6 +122,11 @@ export class CustomerVisit {
         blink();
         const action = () => this.later(Phaser.Math.Between(4000, 8000), () => {
             if (!this.canWait()) { action(); return; }
+            if (guest instanceof DongguView) {
+                this.animate({ targets: Phaser.Utils.Array.GetRandom(guest.ears), angle: 2,
+                    duration: 250, yoyo: true, ease: 'Sine.easeInOut' }, action);
+                return;
+            }
             const moves: Record<string, Phaser.Types.Tweens.TweenBuilderConfig> = {
                 ambient_kkomi: { targets: guest, x: this.seat.x - 1, y: this.seat.y + 1, angle: -1.5, duration: 310, yoyo: true },
                 ambient_seol: { targets: guest, angle: .9, y: this.seat.y - 1, duration: 420, yoyo: true },
@@ -133,6 +149,7 @@ export class CustomerVisit {
         this.clearActivity();
         if (this.guest instanceof DubuView || this.guest instanceof KkamangView) this.guest.pause();
         this.restoreSeat();
+        if (this.guest instanceof DongguView) this.guest.resetParts();
         if (!(this.guest instanceof NabiView)) this.guest.setTexture(this.guest.texture.key.replace('-blink', ''));
     }
     leave(intimacy: number, completeStory: boolean, quiet: boolean,

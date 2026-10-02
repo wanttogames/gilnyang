@@ -1,3 +1,4 @@
+import { DongguView } from '../game/DongguView';
 import { AlleyEventManager } from '../systems/AlleyEventManager';
 import { AlleyEventView } from '../game/AlleyEventView';
 import type { AlleyEvent } from '../types/AlleyEvent';
@@ -37,7 +38,7 @@ import { $, panel, on, toast, icon, modal, closeModal, food } from '../ui/UI';
 import type { SaveData } from '../types/SaveData';
 import type { Customer } from '../types/Customer';
 import type { Quality } from '../types/Recipe';
-type GuestView = Phaser.GameObjects.Image | NabiView | DubuView | KkamangView | AmbientCustomerView;
+type GuestView = DongguView | Phaser.GameObjects.Image | NabiView | DubuView | KkamangView | AmbientCustomerView;
 type CustomerState = 'entering' | 'seating' | 'waiting' | 'ordering' | 'cooking' | 'eating' | 'reacting' | 'leaving';
 interface ActiveCustomer {
     customer: Customer;
@@ -518,6 +519,7 @@ export class RestaurantScene extends Phaser.Scene {
         if (this.guest instanceof DubuView && this.guest.active) this.guest.leaveStone();
     }
     private createGuest(id: string, x: number, y: number) {
+        if (id === 'donggu') return new DongguView(this, x, y);
         if (id === 'nabi') return new NabiView(this, x, y);
         const event = CharacterStoryManager.pendingEvent(id, this.progress(id));
         if (id === 'dubu') return new DubuView(this, x, y, event);

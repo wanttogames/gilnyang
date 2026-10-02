@@ -1,3 +1,4 @@
+import { dongguTailPixels, dongguEarPixels } from '../game/DongguArt';
 import { ambientBodyPixels, ambientPixels, ambientTailPixels } from '../game/AmbientArt';
 import { ambientById } from '../data/ambientCustomers';
 import Phaser from 'phaser';
@@ -23,7 +24,7 @@ export class BootScene extends Phaser.Scene {
                 continue;
             }
             if (hasCharacterArt(c.id)) {
-                for (const layer of c.id === 'nabi' || c.id === 'dubu' || c.id === 'kkamang' ? ['', '-body'] : ['']) {
+                for (const layer of c.id === 'nabi' || c.id === 'dubu' || c.id === 'kkamang' || c.id === 'donggu' ? ['', '-body'] : ['']) {
                     for (const blink of [false, true]) {
                         const g = this.make.graphics({ x: 0, y: 0 });
                         drawPixels(g, characterPixels(c.id, blink, layer === '-body'));
@@ -72,6 +73,13 @@ export class BootScene extends Phaser.Scene {
                     g.destroy();
                 }
             }
+        }
+        for (const [part, pixels] of [
+            ['tail', dongguTailPixels()], ['ear-left', dongguEarPixels()], ['ear-right', dongguEarPixels(true)]
+        ] as const) {
+            const g = this.make.graphics({ x: 0, y: 0 });
+            drawPixels(g, [...pixels]);
+            g.generateTexture('donggu-' + part, 48, 48); g.destroy();
         }
         for (const part of ['tail-base', 'tail-tip', 'ear-left', 'ear-right'] as const) {
             const g = this.make.graphics({ x: 0, y: 0 });

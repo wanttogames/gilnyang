@@ -1,3 +1,4 @@
+import { DongguView } from './DongguView';
 import Phaser from 'phaser';
 import { KkamangView } from './KkamangView';
 import { DubuView } from './DubuView';
@@ -16,7 +17,7 @@ export class CustomerMeal {
     private y: number;
     private angle: number;
     private texture?: string;
-    constructor(private scene: Phaser.Scene, private guest: Phaser.GameObjects.Image | NabiView | DubuView | KkamangView | AmbientCustomerView,
+    constructor(private scene: Phaser.Scene, private guest: DongguView | Phaser.GameObjects.Image | NabiView | DubuView | KkamangView | AmbientCustomerView,
         recipeId: string, quality: Quality, quiet: boolean, taste: () => void, complete: () => void, serving?: 'two-eggs') {
         this.x = guest.x; this.y = guest.y; this.angle = guest.angle;
         this.texture = guest instanceof NabiView ? undefined : guest.texture.key.replace('-blink', '');

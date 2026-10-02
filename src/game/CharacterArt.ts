@@ -1,9 +1,9 @@
-import { dongguPixels } from './DongguArt';
+import { dongguPixels, dongguBodyPixels } from './DongguArt';
 /** Shared 48px canvas: poses stay centre anchored; every paw ends at pixel 47. */
 export const customerRender = { size: 48, centre: 24, footY: 47, scale: 2.5, seatedScaleY: 2.42 } as const;
 export function customerShadowWidth(id: string): number {
     const widths: Record<string, number> = {
-        nabi: 46, kkamang: 42, mongsil: 64, dubu: 58, donggu: 58,
+        nabi: 46, kkamang: 42, mongsil: 64, dubu: 58, donggu: 64,
         ambient_bamtol: 62, ambient_seol: 44, ambient_kkomi: 42,
         ambient_mungchi: 58, ambient_haru: 52, ambient_yeon: 48, ambient_boksil: 68,
     };
@@ -28,7 +28,7 @@ export function hasCharacterArt(id: string): id is RefinedCharacterId {
     return ['nabi', 'dubu', 'kong', 'kkamang', 'mongsil', 'donggu'].includes(id);
 }
 export function characterPixels(id: RefinedCharacterId, blink = false, bodyOnly = false): Pixel[] {
-    if (id === 'donggu') return dongguPixels(blink);
+    if (id === 'donggu') return bodyOnly ? dongguBodyPixels(blink) : dongguPixels(blink);
     if (id === 'kong') {
         const fur = 0xa49b89, stripe = 0x55524e, light = 0xe1d5bb, shade = 0x837b6e;
         return [
