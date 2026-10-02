@@ -1,7 +1,12 @@
 /** Shared 48px canvas: poses stay centre anchored; every paw ends at pixel 47. */
 export const customerRender = { size: 48, centre: 24, footY: 47, scale: 2.5, seatedScaleY: 2.42 } as const;
 export function customerShadowWidth(id: string): number {
-    return id === 'nabi' ? 46 : id === 'kkamang' ? 42 : id === 'mongsil' ? 64 : id === 'dubu' ? 58 : 52;
+    const widths: Record<string, number> = {
+        nabi: 46, kkamang: 42, mongsil: 64, dubu: 58,
+        ambient_bamtol: 62, ambient_seol: 44, ambient_kkomi: 42,
+        ambient_mungchi: 58, ambient_haru: 52, ambient_yeon: 48, ambient_boksil: 68,
+    };
+    return widths[id] ?? 52;
 }
 /** Integer pixel rectangles shared by Phaser textures and matching book portraits. */
 type Pixel = [number, number, number, number, number];
