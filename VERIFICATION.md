@@ -1,64 +1,53 @@
-# 0.3.0 검증 결과 · 오늘도 김 많이
+# 0.3.1 검증 결과 · 살랑살랑 나비
 
-## 기존 구조 분석
+## 원래 렌더링/애니메이션 구조
 
-- Customer는 이름/종/음식/외형 등 정적 데이터, CustomerProgress는 친밀도/visitCount/storyStage/해금/취향 발견 상태였습니다.
-- 기본/비 주문과 식사 반응, 기존 짧은 stories 데이터는 dialogues.ts/rainDialogues.ts에 있었습니다.
-- 기존 이야기 조건은 방문 5/10/15회와 친밀도 10/25/50, 음식 제공 후 최대 한 단계 해금입니다.
-- ProgressionManager.serve에서 골드/친밀도/방문 횟수/레시피/정산을 저장하고 RestaurantScene이 반응 → 이야기 → 퇴장을 표시했습니다.
-- storyStage는 저장되지만 개별 대화 문장 위치는 저장하지 않았습니다.
+- BootScene의 Graphics로 생성하는 48×48 이미지, 기본/눈 감음 두 텍스처. atlas/sprite sheet나 프레임 기반 애니메이션은 없었습니다.
+- RestaurantScene의 Image 하나, 전체 y tween과 공통 3.5초 blink timer. 귀/꼬리는 분리하지 않았습니다.
+- 기존 나비 StoryLine의 normal/shy/quiet/smile에 따라 전체 이미지 각도/크기/위치를 바꾸었습니다.
+- 음식 제공 후 ProgressionManager.serve가 실제 골드/친밀도/방문/스토리/레시피를 저장하고, RestaurantScene이 반응을 표시했습니다.
+- 기존 친밀도 표현은 떠오르는 하트 텍스트+tween. 새 particle 시스템을 도입하지 않았습니다.
 
-## 새 나비 진행
+## 수정 범위
 
-customers[id].characterStory = { stage, lastEventVisit, lastEventNight, pending?: { eventId, visit, night, part, line } }.
+- src/game/NabiView.ts 추가: 나비만 몸/귀/꼬리 Container, idle/눈/귀/음식 반응/감정 우선순위/도트 이펙트/정리.
+- src/scenes/BootScene.ts: 기존 나비 도트를 재사용하는 몸/눈 감음/귀/꼬리/하트/반짝임 텍스처. 다른 캐릭터 기존 텍스처 유지.
+- src/scenes/RestaurantScene.ts: 나비 생성/착석/스토리 감정/실제 서빙 결과/퇴장 연결. 다른 손님 Image와 기존 연출은 유지.
+- package.json/package-lock.json 버전 0.3.1, README.md/CHANGELOG.md/VERIFICATION.md 갱신.
+- 0.3.0 전체 src와 바이트 비교: 기존 변경 파일은 BootScene/RestaurantScene 두 개뿐, NabiView만 추가. 기존 스토리 데이터/진행/대화 UI/요리/보상/날씨/레시피/저장 타입과 로직/CSS/글꼴은 동일합니다.
 
-- 기존 storyStage는 원래 시스템의 값으로 보존합니다. 새 아크는 별도로 0~6단계입니다.
-- CharacterStoryManager가 예약/조건/순차 진행/완료/복원을 담당합니다. 나비만 데이터 등록, 다른 손님은 기존 코드 경로입니다.
-- 조건: 입장 시 현재 방문 포함 1/3/5/7/10/13회, 친밀도 0/3/8/12/18/24 이상. 앞 이벤트 완료 후 2/2/2/3/3회 방문 간격과 다른 밤 조건.
-- 이벤트 1/2/3 주문 전, 4/5 식사 후, 6 주문 전+식사 후. 마지막 이벤트 양쪽은 하나의 이벤트입니다.
-- StoryDialogue는 기존 패널만 사용하며 화자 구분, 짧은 정적/탭으로 즉시 표시, 기존 픽셀 표정/작은 고개 변화가 있습니다.
-- 문장 넘김마다 자동 저장. 이미 서빙한 주문의 식사 후 대화를 재개할 때 보상/방문 횟수는 반복하지 않습니다.
-- 2단계에서 김 취향 발견, 6단계 완료 시 도감 표시 및 일반 대사 확장. 새 숫자 보상/레시피 없음.
+## 동작
 
-## 저장 호환/로직 테스트
+- 기본 반복 tween 2개: 몸의 미세 호흡, 꼬리. 눈 2.5~5초, 귀 4~8초 랜덤 타이머.
+- 초반 꼬리 ±5도, 친밀도 10 또는 스토리 2단계 이후 ±8도, 완료 후 ±12도. 음식 happy ±12도/650ms, veryHappy ±19도/260ms. quiet ±0.6도/3000ms.
+- NORMAL 작은 고개 움직임, GOOD/취향 맞춤 꼬리+반짝임 2개, PERFECT 약 2px 들림+눈 감음+반짝임 3개.
+- 실제 친밀도 증가 시 도트 하트 1~2개. 하트 1~1.1초, 반짝임 0.65~0.85초 후 제거. 동시 이펙트 최대 5개.
+- storyEmotion을 재사용. shy 귀 쫑긋/작은 들림, quiet 낮춘 귀/작은 고개 숙임/느린 몸/거의 멈춘 꼬리/이펙트 없음, smile 눈 감음/부드러운 꼬리/반짝임 1개.
+- 스토리 > 음식 > 친밀도 > idle. 음식/친밀도 반응은 최대 1.8초 후 idle, 스토리 감정은 대화 종료까지 유지.
+- 루트 Container는 입장/퇴장만 이동, 내부 bodyRoot는 감정/호흡만 이동하여 tween 충돌 방지.
+- owned TimerEvent/Tween/effect를 퇴장 시작, destroy, Scene shutdown에서 제거. 동일 부위 tween 교체, shutdown listener 해제. 전용 update loop나 particle emitter 없음.
 
-npm run test:story 통과.
+## 실제 브라우저 회귀 테스트
 
-- 저장 version 1/2, 새 필드 없는 기존 저장 및 높은 친밀도/방문 수에서도 1단계부터 시작.
-- 기존 gold/night/weather/recipes/upgrades/intimacy/visitCount/storyStage/preference 보존.
-- 같은 방문/같은 밤/방문 간격/친밀도 부족으로 연속 이벤트가 열리지 않음.
-- 주문 전 대화 문장 위치 저장/복원, 마지막 이벤트 전후 연결과 서빙 이후 복원.
-- 완료 상태에서 재예약 불가. 잘못된 story 필드는 안전 초기화하며 기존 저장의 골드는 유지.
-- 두부의 기존 3단계 이야기/취향 해금 경로 유지.
+Headless Chromium 153, 실제 마우스와 터치 이벤트.
 
-## 실제 플레이 테스트
-
-Headless Chromium 153에서 마우스 클릭과 실제 터치 이벤트로 검증했습니다. 이후 나비 방문을 확실히 재현하기 위해 테스트 저장의 방문 대기열만 고정했습니다. 게임의 실제 랜덤 손님 생성 로직은 수정하지 않았습니다.
-
-- PC 720×900: 첫 밤 시작 → 나비 이벤트 1 도중 새로고침 → 같은 문장에서 재개 → 주먹밥 PERFECT → 두부 어묵 PERFECT → 까망 어묵 NORMAL → 몽실 우유 → 콩이 주먹밥 → 손님 5명 정산 → 다음 밤.
-- 모바일 390/320×900: 나비 방문 2~14회, 밤 전환 포함. 이벤트 2/3/4/5/6이 방문 3/5/7/10/13회에 순차 발생. 사이 방문은 일반 주문. 방문 14회에는 완료 이후 일반 방문.
-- 이벤트 2 도중 새로고침: 현재 문장 위치 복원. 김 취향은 요리 전에 반영.
-- 이벤트 4 식사 후 대화 및 이벤트 6 전후 대화 도중 새로고침: 문장 위치 복원, 지급된 골드 유지.
-- 각 나비 주먹밥 PERFECT 서빙의 기존 +15골드/+3친밀도 확인. 기본 요리를 선택해 추가 취향 보너스 없이 검증.
-- 모든 이벤트가 정확히 한 번 진행되고, 마지막 전후 대화가 하나의 주요 이벤트인 것을 확인.
-- 매 밤 정산/정산 화면 새로고침/다음 밤 정상. 완료 시 도감 6/6과 작은 완료 표시 확인.
-- 비/눈/맑음을 번갈아 넣어 스토리 진행 확인. 날씨 조건으로 진행을 강제하거나 제한하지 않음.
-- 80회 방문/친밀도 200/456골드/눈/레시피 5개/냄비 보유의 기존 저장: 첫 이벤트부터 시작, 기존 값 보존, 새로고침 후 완료한 첫 이벤트 반복 없음.
-- 큰 대화 버튼 높이 44 CSS px 이상, 패널 안 배치 확인. 320px 가로 넘침 없음. 대화/도감 스크린샷 시각 검토.
-- 브라우저 JavaScript 런타임 오류 0건.
-
-## 변경 금지 범위 비교
-
-0.2.3과 바이트 비교: CookingScene/RiceballCooking/OdenCooking/CookingManager/cookingSteps/Cooking 타입, recipes/customers/dialogues/rainDialogues/weather, WeatherManager/ProgressionManager/RecipeManager/CustomerManager 등 15개 파일 동일. 기존 요리/보상/레시피/손님 확률과 다른 캐릭터 콘텐츠를 변경하지 않았습니다.
+- PC: 첫 밤/나비 등장/첫 대화와 새로고침 복원/idle/꼬리 변화/랜덤 눈 깜빡임과 귀 움직임 확인.
+- PC: 주먹밥 PERFECT → 매우 기쁨/감은 눈/하트 2/반짝임 3, 기존 골드 +15. 1.9초 후 idle/이펙트 0/반복 tween 2개로 복귀.
+- 나비 퇴장 후 timer 0/tween 0/effect 0/active false, 다음 두부는 기존 Image. 기존 어묵 NORMAL 제공과 보상 확인.
+- 모바일 390px: 실제 주먹밥 GOOD → happy/반짝임 2/하트 1/기존 골드 +12 → 정산/다음 밤/새로고침 저장 복원.
+- 모바일 320px: 실제 주먹밥 NORMAL → 작은 고개 반응/반짝임 없음/하트 1/기존 골드 +10 → 정산/다음 밤/저장 복원.
+- 기존 NABI_STORY_5 식사 후 대화 저장을 로드: sad, 꼬리 범위 0.6도, 하트/반짝임 0. PERFECT 반응을 호출해도 스토리 감정 유지. 새로고침 후 같은 감정과 대화 복원, 골드 중복 없음.
+- 마지막 이벤트의 기존 smile 대사: 감은 눈/반짝임 1. 실제 완료 버튼으로 stage 6 저장, endStory에 stage 6 전달 확인. 다음 밤 나비 일반 주문에서 편안한 ±12도 idle, 이벤트 반복 없음.
+- 반응 40회 연속 호출: timer≤5/tween≤9/effect=5로 제한. Scene stop 이후 모든 owned count 0. 런타임 오류 없음.
+- 친밀도 증가 0인 반응: 하트 없음. 20회 생성/반응/정리/destroy: shutdown listener 수 증가 없음, 골드 변화 없음.
+- 첫 밤 5명 전체 회귀: 나비 주먹밥 → 두부 어묵 → 까망 어묵 → 몽실 우유 → 콩이 주먹밥 → 정산 → 다음 밤. 기존 대화/요리/보상 흐름 정상.
+- PC PERFECT와 모바일 quiet 스크린샷 시각 검토. 새 입력/hover 의존 추가 없음.
+- npm run test:story 통과: 기존 v1/v2 저장, 진행 조건, 문장 복원, 완료/중복 방지, 다른 캐릭터 해금 유지.
 
 ## 최종 빌드/단일 HTML
 
-- npm run build 성공: TypeScript strict + Vite production build 통과. 기존 Phaser 번들 크기 경고만 남습니다.
-- 최종 단일 HTML file:// 실제 터치 실행: 나비 첫 대화 → 주먹밥 → 서빙 → 두부 어묵 → 서빙 → 다음 손님.
-- 도감 1/6과 아직 잠긴 기억 확인, 도감 위로 날씨 배지가 겹치지 않게 화면 순서 조정.
-- 포함 한글 글꼴 로드 성공, HTTP/HTTPS 외부 요청 0건, 런타임 오류 0건.
-- 물리 휴대폰 실기 테스트는 수행하지 않았습니다.
+npm run build 성공: TypeScript strict와 Vite production build 통과. 기존 Phaser 번들 크기 경고만 있습니다.
 
-## 다음 캐릭터 확장
+최종 file:// 단일 HTML 터치 실행: 첫 인사 → 주먹밥 → 서빙 → 두부 어묵 → 서빙 → 다음 손님 → 나비 도감 1/6 확인. 포함 글꼴 로드, 외부 HTTP/HTTPS 요청 0건, JavaScript 오류 0건.
 
-characterStories[customerId]에 같은 이벤트 형식으로 등록하면 공통 예약/진행/저장/전후 대화/도감 표시를 재사용할 수 있습니다. 이번 버전에는 나비 외 새 이야기가 없습니다.
+물리 휴대폰의 실측 FPS/저사양 성능 테스트는 수행하지 않았습니다. 이펙트 수와 기본 tween/timer를 작게 제한하는 구조 및 모바일 브라우저 에뮬레이션을 검증했습니다.

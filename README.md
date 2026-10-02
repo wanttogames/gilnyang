@@ -1,6 +1,6 @@
 # 길냥이 식당
 
-작은 밤, 따뜻한 한 끼. Phaser 3 + TypeScript + Vite로 만든 세로형 픽셀 힐링 경영 게임입니다. 현재 버전은 **0.3.0 · 오늘도 김 많이**입니다.
+작은 밤, 따뜻한 한 끼. Phaser 3 + TypeScript + Vite로 만든 세로형 픽셀 힐링 경영 게임입니다. 현재 버전은 **0.3.1 · 살랑살랑 나비**입니다.
 
 ## 실행
 
@@ -21,6 +21,21 @@ npm run preview
 `dist/`가 정적 호스팅 배포 결과물입니다. GitHub Pages용 저장소 경로(`/gilnyang/`)는 `vite.config.ts`에서 설정했습니다. `main` 브랜치에 푸시하면 `.github/workflows/deploy.yml`이 빌드 후 Pages에 배포합니다. 처음 한 번 저장소의 **Settings → Pages → Source → GitHub Actions**를 선택하세요. 배포 주소는 `https://wanttogames.github.io/gilnyang/`입니다. 서버·DB·외부 API 없이 실행되며 입력과 진행 데이터는 서버로 전송하지 않습니다. 개발 서버의 핫 리로드 통신은 개발 환경에서만 사용됩니다.
 
 단일 HTML 파일을 다시 만들려면 `npm run build` 후 `python scripts/export_standalone.py`를 실행하세요. 생성되는 `release/gilnyang-play.html`은 그래픽·글꼴·게임 코드가 들어 있는 단일 실행 파일입니다. 내려받아 Chrome/Edge 등으로 열면 플레이할 수 있습니다. 저장은 파일/사이트 주소와 브라우저별로 분리되므로 지속적인 플레이에는 같은 주소를 사용하세요. HTML 파일을 옮기거나 이름을 바꾸면 저장이 달라질 수 있습니다.
+
+## 0.3.1 · 살랑살랑 나비
+
+나비만 기존 도트 색/외형을 유지한 몸·귀·꼬리 레이어로 렌더링합니다. 다른 캐릭터는 기존 Image/눈 깜빡임/idle 그대로입니다. 저장/스토리/요리/보상 데이터는 변경하지 않습니다.
+
+- 몸의 아주 작은 호흡, 느린 꼬리, 2.5~5초 랜덤 눈 깜빡임, 4~8초 랜덤 귀 움직임.
+- 초반 꼬리는 작게, 친밀도 10 이상 또는 스토리 2단계 이후 조금 더 편안하게, 완료 후 더 부드럽고 넓게 움직입니다.
+- NORMAL: 작은 고개 움직임. GOOD/취향 맞춤: 조금 빠른 꼬리와 반짝임 2개. PERFECT: 빠른 꼬리, 약 2px 들림, 잠깐 감은 눈, 반짝임 3개.
+- 실제 친밀도 증가 시 도트 하트 1~2개, 약 1초 후 제거. 반응은 1~2초 이내 기본 상태로 돌아옵니다.
+- 기존 스토리 감정 shy/quiet/smile을 재사용합니다. 조심스러움에는 귀 쫑긋과 작은 들림, quiet에는 거의 멈춘 꼬리/낮춘 귀/느린 몸, smile에는 감은 눈과 반짝임 1개.
+- 스토리 감정 > 음식 반응 > 친밀도 반응 > idle. quiet에는 하트/반짝임을 억제하며 식사 반응이 끼어들지 않습니다.
+- NabiView가 소유한 Tween/TimerEvent/effect만 관리합니다. 같은 부위의 tween은 교체하고, 퇴장 시작/destroy/Scene shutdown에서 전부 정리합니다.
+- 기본 반복 tween 2개, 랜덤 예약 timer 2개, 동시 이펙트 최대 5개. 새 update loop나 particle emitter 없음.
+
+구현 파일: `src/game/NabiView.ts`, `src/scenes/BootScene.ts`, `src/scenes/RestaurantScene.ts`. 버전/문서만 함께 갱신했습니다. 기존 UI/스토리 내용/SaveData/요리 파일은 그대로입니다.
 
 ## 0.3.0 · 오늘도 김 많이
 

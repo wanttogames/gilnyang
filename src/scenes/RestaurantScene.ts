@@ -1,3 +1,4 @@
+import { NabiView } from '../game/NabiView';
 import { customerById } from '../data/customers';
 import { CharacterStoryManager } from '../systems/CharacterStoryManager';
 import { StoryDialogue } from '../ui/StoryDialogue';
@@ -25,7 +26,7 @@ import type { Customer } from '../types/Customer';
 import type { Quality } from '../types/Recipe';
 export class RestaurantScene extends Phaser.Scene {
     save!: SaveData;
-    guest?: Phaser.GameObjects.Image;
+    guest?: Phaser.GameObjects.Image | NabiView;
     chef!: Phaser.GameObjects.Image;
     phase = 'closed';
     current?: Customer;
@@ -45,7 +46,7 @@ export class RestaurantScene extends Phaser.Scene {
         this.nav();
         this.time.addEvent({ delay: 3500, loop: true, callback: () => {
                 [this.chef, this.guest].forEach(s => {
-                    if (!s || (s === this.guest && this.phase === 'character-story'))
+                    if (!s || s instanceof NabiView || (s === this.guest && this.phase === 'character-story'))
                         return;
                     const key = s.texture.key.replace('-blink', '');
                     s.setTexture(key + '-blink');
@@ -244,7 +245,8 @@ export class RestaurantScene extends Phaser.Scene {
         if (pending?.part === 'after' && previous && previous.visitCount >= pending.visit) {
             // Serving was already saved. Resume the dialogue without paying again.
             this.current = customerById(previousId);
-            this.guest = this.add.image(246, 733, previousId).setScale(2.5).setDepth(2);
+            this.guest = this.createGuest(previousId, 246, 733);
+            if (this.guest instanceof NabiView) this.guest.settle(previous.intimacy, previous.characterStory?.stage ?? 0);
             this.playCharacterStory('after', () => this.depart());
             return;
         }
@@ -264,11 +266,12 @@ export class RestaurantScene extends Phaser.Scene {
         this.guest?.destroy();
         panel(`<div class="eyebrow">${this.save.activeNight!.report.served + 1} / 5 · 오늘의 손님</div><h2>작은 발걸음이 들려요</h2><p class="muted">누가 찾아왔을까요?</p><div class="waiting"><i></i><i></i><i></i></div>`);
         $('caption').textContent = this.save.weather === 'rain' ? '젖은 발걸음이 작은 지붕 아래로 들어와요.' : weatherDefinitions[this.save.weather].caption;
-        this.guest = this.add.image(-65, 733, c.id).setScale(2.5).setDepth(2);
+        this.guest = this.createGuest(c.id, -65, 733);
         this.tweens.add({ targets: this.guest, x: 246, duration: 1600, ease: 'Sine.easeOut', onComplete: () => {
                 if (!this.guest)
                     return;
-                this.tweens.add({ targets: this.guest, y: 730, duration: 1000, yoyo: true, repeat: -1 });
+                if (this.guest instanceof NabiView) this.guest.settle(this.save.customers[c.id].intimacy, this.save.customers[c.id].characterStory?.stage ?? 0);
+                else this.tweens.add({ targets: this.guest, y: 730, duration: 1000, yoyo: true, repeat: -1 });
                 this.save.customers[c.id].unlocked = true;
                 audio.note(330, .2);
                 CharacterStoryManager.reserve(c.id, this.save.customers[c.id], this.save.night);
@@ -284,8 +287,13 @@ export class RestaurantScene extends Phaser.Scene {
         this.hud();
         audio.success();
         $('caption').textContent = '배부른 한 끼가, 다정한 기억이 됩니다.';
-        const plate = this.add.text(280, 700, '♥', { fontSize: '32px', color: '#eca19b' });
-        this.tweens.add({ targets: plate, y: 652, alpha: 0, duration: 1600, onComplete: () => plate.destroy() });
+        if (this.guest instanceof NabiView) {
+            const p = this.save.customers[c.id];
+            this.guest.meal(q, reward.intimacy, reward.favorite, p.intimacy, p.characterStory?.stage ?? 0);
+        } else {
+            const plate = this.add.text(280, 700, '♥', { fontSize: '32px', color: '#eca19b' });
+            this.tweens.add({ targets: plate, y: 652, alpha: 0, duration: 1600, onComplete: () => plate.destroy() });
+        }
         panel(`<div class="eyebrow">잘 먹었습니다</div><h2>${c.name}의 작은 인사</h2><p class="quote">“${DialogueManager.reaction(c.id, this.save.weather, reward.favorite)}”</p><div class="rewards"><span>${icon('coin')} +${reward.gold} G</span><span>${icon('heart')} 친밀도 +${reward.intimacy}${reward.favorite ? ' · 취향 보너스' : ''}</span></div><button id="next" class="primary">${reward.stories.length || this.save.customers[c.id].characterStory?.pending?.part === 'after' ? '이야기 들어 주기' : this.save.activeNight!.report.served === 5 ? '오늘 밤 마무리' : '다음 손님 맞이하기'} →</button>`);
         on('next', () => this.showPendingRecipes(() => {
             if (reward.stories.length)
@@ -299,7 +307,8 @@ export class RestaurantScene extends Phaser.Scene {
         const pending = p.characterStory?.pending, event = CharacterStoryManager.pendingEvent(c.id, p);
         if (!pending || pending.part !== part || !event || !event[part].length) { next(); return; }
         this.phase = 'character-story';
-        this.tweens.getTweensOf(this.guest!).forEach(tween => tween.pause());
+        if (this.guest instanceof NabiView) this.guest.beginStory();
+        else this.tweens.getTweensOf(this.guest!).forEach(tween => tween.pause());
         $('caption').textContent = this.save.weather === 'rain' ? '빗소리 사이로, 작은 이야기를 들어요.' : '작은 지붕 아래, 잠깐의 이야기.';
         new StoryDialogue(event, part, () => p.characterStory!.pending!.line, () => {
             const finishedPart = CharacterStoryManager.advance(c.id, p);
@@ -311,7 +320,8 @@ export class RestaurantScene extends Phaser.Scene {
             SaveManager.save(this.save);
             return finishedPart;
         }, c.name, line => this.storyExpression(line), () => {
-            if (this.guest) {
+            if (this.guest instanceof NabiView) this.guest.endStory(p.intimacy, p.characterStory?.stage ?? 0);
+            else if (this.guest) {
                 this.guest.setTexture(c.id).setAngle(0).setScale(2.5).setY(733);
                 this.tweens.getTweensOf(this.guest).forEach(tween => tween.resume());
             }
@@ -319,6 +329,7 @@ export class RestaurantScene extends Phaser.Scene {
         });
     }
     private storyExpression(line: StoryLine) {
+        if (this.guest instanceof NabiView) { this.guest.storyLine(line); return; }
         if (!this.guest || line.speaker !== 'guest') return;
         const emotion = line.emotion ?? 'normal';
         this.guest.setTexture(this.current!.id + (emotion === 'smile' ? '-blink' : ''));
@@ -342,7 +353,8 @@ export class RestaurantScene extends Phaser.Scene {
         };
         show();
     }
-    depart() { this.phase = 'leaving'; panel('<div class="eyebrow">또 만나요</div><h2>다음 밤에도 기다릴게요.</h2><p class="muted">골목에 따뜻한 기억 하나가 남았어요.</p>'); this.tweens.add({ targets: this.guest, x: 800, duration: 1100, onComplete: () => { this.guest?.destroy(); this.guest = undefined; this.nextGuest(); } }); }
+    private createGuest(id: string, x: number, y: number) { return id === 'nabi' ? new NabiView(this, x, y) : this.add.image(x, y, id).setScale(2.5).setDepth(2); }
+    depart() { if (this.guest instanceof NabiView) this.guest.cleanup(); this.phase = 'leaving'; panel('<div class="eyebrow">또 만나요</div><h2>다음 밤에도 기다릴게요.</h2><p class="muted">골목에 따뜻한 기억 하나가 남았어요.</p>'); this.tweens.add({ targets: this.guest, x: 800, duration: 1100, onComplete: () => { this.guest?.destroy(); this.guest = undefined; this.nextGuest(); } }); }
     result() { this.phase = 'result'; this.guest?.destroy(); $('caption').textContent = '불을 끄기 전, 오늘의 따뜻함을 세어 보아요.'; ResultScene.show(this.save, () => { this.save.night++; this.save.weather = WeatherManager.roll(this.save.night); this.save.activeNight = null; this.refreshWeather(); SaveManager.save(this.save); this.hud(); this.welcome(); }); }
     menu() {
         modal(`<div class="sheet-head"><div><span class="eyebrow">KITCHEN NOTES · ${this.save.unlockedRecipes.length}/5</span><h2>오늘의 메뉴</h2></div><button id="close" class="close" aria-label="닫기">×</button></div><p class="muted">재료는 늘 충분해요. 단골의 마음에서 새 메뉴를 배워요.</p>${RecipeManager.all().map(r => {
