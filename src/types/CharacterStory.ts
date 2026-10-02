@@ -11,6 +11,7 @@ export interface CharacterStoryEvent {
     after: StoryLine[];
     summary: string;
     revealsPreference?: boolean;
+    arrival?: { item?: 'button' | 'cap' | 'stone'; quiet?: boolean };
 }
 export interface CharacterStoryProgress {
     stage: number;

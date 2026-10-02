@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { customerRender, customerShadowWidth } from './CharacterArt';
+import { DubuView } from './DubuView';
 import { NabiView } from './NabiView';
 
 /** Owns only one guest's movement/waiting. Scene phase remains the single flow state. */
@@ -15,7 +16,7 @@ export class CustomerVisit {
     private waiting = false;
     private cleaned = false;
     private departing = false;
-    constructor(private scene: Phaser.Scene, private guest: Phaser.GameObjects.Image | NabiView,
+    constructor(private scene: Phaser.Scene, private guest: Phaser.GameObjects.Image | NabiView | DubuView,
         private dog: boolean, private canWait: () => boolean) {
         const id = guest instanceof NabiView ? 'nabi' : guest.texture.key.replace('-blink', '');
         this.shadow = scene.add.ellipse(0, 0, customerShadowWidth(id), 9, 0x101626, .28)
@@ -48,18 +49,25 @@ export class CustomerVisit {
     private walk(x: number, y: number, duration: number, done: () => void) {
         this.guest.setAngle(0).setScale(customerRender.scale);
         if (this.guest instanceof NabiView) this.guest.walking();
+        if (this.guest instanceof DubuView) this.guest.walking();
         // Scale supplies small footsteps without competing with path x/y.
-        this.walkingTween = this.animate({ targets: this.guest, scaleY: customerRender.scale - .04, duration: 140, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+        this.walkingTween = this.animate({ targets: this.guest, scaleY: customerRender.scale - (this.guest instanceof DubuView && !this.guest.quietArrival ? .07 : .04), duration: 140, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
         this.animate({ targets: this.guest, x, y, duration, ease: 'Sine.easeInOut' }, () => {
             this.stop(this.walkingTween); this.guest.setScale(customerRender.scale); done();
         });
     }
     enter(seating: () => void, seated: () => void, ready: () => void) {
-        this.walk(CustomerVisit.approach.x, CustomerVisit.approach.y, 1150, () => {
+        const dubu = this.guest instanceof DubuView ? this.guest : undefined;
+        const arrive = () => {
+            if (dubu && !dubu.quietArrival) this.animate({ targets: dubu, x: CustomerVisit.approach.x, angle: -3, duration: 170 }, seat);
+            else seat();
+        };
+        const seat = () => {
             seating();
             this.animate({ targets: this.guest, angle: this.dog ? -2 : 1.5, duration: 120, yoyo: true });
-            this.later(270, () => this.animate({ targets: this.guest, ...CustomerVisit.seat, scaleY: customerRender.seatedScaleY, duration: 260, ease: 'Sine.easeOut' }, () => { seated(); this.later(240, ready); }));
-        });
+            this.later(270, () => this.animate({ targets: this.guest, ...CustomerVisit.seat, scaleY: customerRender.seatedScaleY, duration: 260, ease: 'Sine.easeOut' }, () => { seated(); this.later(dubu ? 330 : 240, ready); }));
+        };
+        this.walk(CustomerVisit.approach.x + (dubu && !dubu.quietArrival ? 4 : 0), CustomerVisit.approach.y, dubu ? dubu.quietArrival ? 1400 : 850 : 1150, arrive);
     }
     restoreSeat() { this.guest.setPosition(CustomerVisit.seat.x, CustomerVisit.seat.y).setAngle(0).setScale(customerRender.scale, customerRender.seatedScaleY); this.syncShadow(); }
     wait() {
@@ -68,6 +76,7 @@ export class CustomerVisit {
         this.restoreSeat();
         // Nabi already owns random eyes/ears/tail; do not add a second idle timer.
         if (this.guest instanceof NabiView) return;
+        if (this.guest instanceof DubuView) { this.guest.wait(); return; }
         this.animate({ targets: this.guest, y: CustomerVisit.seat.y - 1, duration: 1600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
         const blink = () => this.later(Phaser.Math.Between(2500, 5000), () => {
             if (!this.canWait()) { blink(); return; }
@@ -87,6 +96,7 @@ export class CustomerVisit {
         if (!this.waiting) return;
         this.waiting = false;
         this.clearActivity();
+        if (this.guest instanceof DubuView) this.guest.pause();
         this.restoreSeat();
         if (!(this.guest instanceof NabiView)) this.guest.setTexture(this.guest.texture.key.replace('-blink', ''));
     }
@@ -100,6 +110,7 @@ export class CustomerVisit {
             farewell();
             const familiar = intimacy >= 10, friend = intimacy >= 25;
             if (this.guest instanceof NabiView) this.guest.farewell(familiar, friend || completeStory, quiet);
+            else if (this.guest instanceof DubuView) this.guest.farewell(quiet);
             else if (friend && !quiet) {
                 const spark = this.scene.add.image(this.guest.x + 28, this.guest.y - 42, 'nabi-spark').setScale(1.5).setDepth(3).setName('farewell-spark');
                 this.effects.add(spark);
@@ -108,11 +119,17 @@ export class CustomerVisit {
             this.animate({ targets: this.guest, angle: familiar ? -2 : 2, duration: familiar ? 160 : 130, yoyo: true }, () => {
                 this.later(familiar ? 160 : 80, () => {
                     leaving();
-                    const exit = () => this.walk(CustomerVisit.entrance.x, CustomerVisit.entrance.y, completeStory ? 650 : 1000, () => { this.cleanup(); finished(); });
+                    const exit = () => this.walk(CustomerVisit.entrance.x, CustomerVisit.entrance.y, this.guest instanceof DubuView ? (quiet ? 1100 : 700) : completeStory ? 650 : 1000, () => { this.cleanup(); finished(); });
                     if (completeStory && this.guest instanceof NabiView) {
                         this.walk(160, 735, 320, () => {
                             (this.guest as NabiView).farewell(true, true, false, false);
                             this.animate({ targets: this.guest, angle: 2, duration: 150, yoyo: true });
+                            this.later(350, exit);
+                        });
+                    } else if (this.guest instanceof DubuView && (completeStory || familiar) && !quiet) {
+                        this.walk(160, 735, 280, () => {
+                            (this.guest as DubuView).farewell(false);
+                            this.animate({ targets: this.guest, angle: -3, duration: 150, yoyo: true });
                             this.later(350, exit);
                         });
                     } else exit();

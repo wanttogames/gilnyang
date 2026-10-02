@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { DubuView } from './DubuView';
 import { NabiView } from './NabiView';
 import type { Quality } from '../types/Recipe';
 
@@ -13,13 +14,13 @@ export class CustomerMeal {
     private y: number;
     private angle: number;
     private texture?: string;
-    constructor(private scene: Phaser.Scene, private guest: Phaser.GameObjects.Image | NabiView,
+    constructor(private scene: Phaser.Scene, private guest: Phaser.GameObjects.Image | NabiView | DubuView,
         recipeId: string, quality: Quality, quiet: boolean, taste: () => void, complete: () => void) {
         this.x = guest.x; this.y = guest.y; this.angle = guest.angle;
         this.texture = guest instanceof NabiView ? undefined : guest.texture.key.replace('-blink', '');
         this.paused = scene.tweens.getTweensOf(guest).filter(tween => tween.isPlaying());
         this.paused.forEach(tween => tween.pause());
-        if (guest instanceof NabiView) guest.beginEating();
+        if (guest instanceof NabiView || guest instanceof DubuView) guest.beginEating();
         scene.events.once(Phaser.Scenes.Events.SHUTDOWN, this.cleanup, this);
         const plate = scene.add.ellipse(326, 778, 58, 13, 0xe7cda5).setDepth(2.5).setName('meal-plate');
         const food = scene.add.image(326, 752, 'meal-' + recipeId).setScale(2).setDepth(2.6).setName('served-food');
@@ -67,7 +68,7 @@ export class CustomerMeal {
     private restore() {
         if (!this.guest.active) return;
         this.guest.setPosition(this.x, this.y).setAngle(this.angle);
-        if (this.guest instanceof NabiView) this.guest.endEating();
+        if (this.guest instanceof NabiView || this.guest instanceof DubuView) this.guest.endEating();
         else if (this.texture) this.guest.setTexture(this.texture);
     }
     cleanup() {

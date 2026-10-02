@@ -98,7 +98,7 @@ export function characterPixels(id: RefinedCharacterId, blink = false, bodyOnly 
         if (!bodyOnly) pixels.push(...move(nabiEar(),9,4), ...move(nabiEar(true),28,4));
         return pixels;
     }
-    return [
+    const dubu: Pixel[] = [
         // A visible hollow curl, drawn behind the compact body.
         [36,27,8,3,brown],[33,30,14,3,brown],[32,33,4,8,brown],[43,33,4,8,brown],
         [35,39,9,4,brown],[36,29,7,3,cream],[34,32,4,7,cream],[42,32,3,7,cream],
@@ -116,6 +116,11 @@ export function characterPixels(id: RefinedCharacterId, blink = false, bodyOnly 
         [22,28,4,3,brown],[23,31,2,2,brown],[19,32,3,1,brown],[26,32,3,1,brown],
         [20,33,8,1,brown],[11,38,5,4,tan],[32,38,5,4,tan]
     ];
+    return bodyOnly ? dubu.filter((_, i) => i >= 10 && !(i >= 15 && i < 25)) : dubu;
+}
+export function dubuPart(part: 'tail' | 'ears'): Pixel[] {
+    const pixels = characterPixels('dubu');
+    return part === 'tail' ? pixels.slice(0, 10) : pixels.slice(15, 25);
 }
 export function characterPortrait(id: string): string | undefined {
     if (!hasCharacterArt(id)) return;

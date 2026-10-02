@@ -12,5 +12,34 @@ p.characterStory={stage:2,lastEventVisit:3,lastEventNight:1};p.visitCount=10;p.i
 s=newSave();p=s.customers.nabi;p.visitCount=12;p.intimacy=40;p.characterStory={stage:5,lastEventVisit:10,lastEventNight:4};s.night=5;s.activeNight={queue:['nabi'],report:{served:0,gold:0,perfect:0,intimacy:{},discoveries:[]}};M.reserve('nabi',p,5);while(p.characterStory.pending.part==='before')M.advance('nabi',p);assert.equal(p.characterStory.stage,5);assert.equal(p.characterStory.pending.part,'after');P.serve(s,'nabi','완벽','');let loaded=S.load();assert.equal(loaded.gold,15);assert.equal(loaded.activeNight.report.served,1);assert.equal(loaded.customers.nabi.characterStory.pending.eventId,'NABI_STORY_COMPLETE');assert.equal(loaded.customers.nabi.characterStory.pending.visit,13);while(loaded.customers.nabi.characterStory.pending)M.advance('nabi',loaded.customers.nabi);S.save(loaded);loaded=S.load();assert(M.complete('nabi',loaded.customers.nabi));assert.equal(M.reserve('nabi',loaded.customers.nabi,6),undefined);assert.equal(loaded.gold,15);
 // Missing or malformed story state cannot erase an otherwise valid save.
 for(const raw of [undefined,null,{stage:-1},{stage:'six'},{stage:0,pending:{eventId:'bad',part:'before',line:0,visit:1,night:1}},{stage:0,pending:{eventId:'NABI_STORY_1',part:'before',line:999,visit:1,night:1}}]){s=newSave();s.gold=555;s.customers.nabi.characterStory=raw;stored=JSON.stringify(s);loaded=S.load();assert.equal(loaded.gold,555);assert.equal(loaded.customers.nabi.characterStory.stage,0);assert.equal(loaded.customers.nabi.characterStory.pending,undefined);}
-s=newSave();const dubu=s.customers.dubu;dubu.visitCount=5;dubu.intimacy=10;assert(D.unlock('dubu',dubu).length>0);assert.equal(dubu.storyStage,1);assert(dubu.preferenceFound);assert.equal(dubu.characterStory,undefined);
-console.log('PASS model: v1/v2 save migration, high affinity start, visit/night/intimacy gates, cursor persistence, split ending, malformed fields, completion/no repeat, unchanged legacy customer unlock');
+// Both drama arcs use identical reservation/save/once-per-visit rules.
+for (const id of ['nabi','dubu']) {
+ s=newSave(); p=s.customers[id]; p.intimacy=100; p.visitCount=40;
+ for(let stage=0;stage<6;stage++) {
+  const event=M.reserve(id,p,stage+1); assert.equal(event,M.events(id)[stage]);
+  while(p.characterStory.pending) M.advance(id,p);
+  assert.equal(p.characterStory.stage,stage+1);
+  assert.equal(M.reserve(id,p,stage+1),undefined);
+  S.save(s); s=S.load(); p=s.customers[id]; assert.equal(p.characterStory.stage,stage+1);
+  p.visitCount+=3;
+ }
+ assert(M.complete(id,p));assert.equal(M.reserve(id,p,20),undefined);
+}
+s=newSave();p=s.customers.dubu;p.storyStage=3;p.visitCount=50;p.intimacy=100;S.save(s);s=S.load();p=s.customers.dubu;
+assert.equal(p.storyStage,3);assert.equal(p.characterStory.stage,0);assert.equal(M.reserve('dubu',p,1).id,'DUBU_STORY_1');
+assert.deepEqual(D.unlock('dubu',p),[]);
+const kong=s.customers.kong;kong.visitCount=5;kong.intimacy=10;assert(D.unlock('kong',kong).length>0);assert.equal(kong.storyStage,1);
+for (const version of [1,2]) {
+ s=newSave();s.version=version;s.gold=321;s.weather='rain';s.customers.dubu={intimacy:99,visitCount:42,storyStage:3,unlocked:true,preferenceFound:true};
+ stored=JSON.stringify(s);const old=S.load();assert.equal(old.gold,321);assert.equal(old.weather,'rain');assert.equal(old.customers.dubu.intimacy,99);assert.equal(old.customers.dubu.visitCount,42);assert.equal(old.customers.dubu.storyStage,3);assert.equal(old.customers.dubu.characterStory.stage,0);
+}
+for (let stage=1;stage<6;stage++) {
+ s=newSave();p=s.customers.dubu;const e=M.events('dubu')[stage];p.intimacy=e.minIntimacy;p.visitCount=e.minVisits-1;
+ p.characterStory={stage,lastEventVisit:e.minVisits-e.visitsSincePrevious,lastEventNight:4};
+ assert.equal(M.reserve('dubu',p,4),undefined);
+ p.intimacy=e.minIntimacy-1;assert.equal(M.reserve('dubu',p,5),undefined);
+ p.intimacy=e.minIntimacy;p.visitCount=e.minVisits-2;assert.equal(M.reserve('dubu',p,5),undefined);
+ p.visitCount=e.minVisits-1;assert.equal(M.reserve('dubu',p,5).id,e.id);
+ M.advance('dubu',p);S.save(s);const restored=S.load();assert.equal(restored.customers.dubu.characterStory.pending.line,1);
+}
+console.log('PASS Nabi/Dubu: migration, gates, cursor persistence, split ending, ordered six stages, no repeat, legacy progress preserved; Kong legacy unlock unchanged');

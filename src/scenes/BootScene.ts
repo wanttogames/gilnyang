@@ -1,12 +1,12 @@
 import Phaser from 'phaser';
-import { characterPixels, drawPixels, hasCharacterArt, nabiEar, nabiTail, nabiTailLayout } from '../game/CharacterArt';
+import { characterPixels, dubuPart, drawPixels, hasCharacterArt, nabiEar, nabiTail, nabiTailLayout } from '../game/CharacterArt';
 import { customers } from '../data/customers';
 export class BootScene extends Phaser.Scene {
     constructor() { super('Boot'); }
     create() {
         for (const c of [{ id: 'chef', color: 0xd6c6b6, accent: 0x918275, dog: false }, ...customers]) {
             if (hasCharacterArt(c.id)) {
-                for (const layer of c.id === 'nabi' ? ['', '-body'] : ['']) {
+                for (const layer of c.id === 'nabi' || c.id === 'dubu' ? ['', '-body'] : ['']) {
                     for (const blink of [false, true]) {
                         const g = this.make.graphics({ x: 0, y: 0 });
                         drawPixels(g, characterPixels(c.id, blink, layer === '-body'));
@@ -16,7 +16,7 @@ export class BootScene extends Phaser.Scene {
                 }
                 continue;
             }
-            for (const layer of c.id === 'nabi' ? ['', '-body'] : ['']) {
+            for (const layer of c.id === 'nabi' || c.id === 'dubu' ? ['', '-body'] : ['']) {
                 for (const blink of [false, true]) {
                     const g = this.make.graphics({ x: 0, y: 0 });
                     const rect = (x: number, y: number, w: number, h: number, color: number) => { g.fillStyle(color); g.fillRect(x, y, w, h); };
@@ -55,6 +55,21 @@ export class BootScene extends Phaser.Scene {
                     g.destroy();
                 }
             }
+        }
+        for (const part of ['tail', 'ears'] as const) {
+            const g = this.make.graphics({ x: 0, y: 0 });
+            drawPixels(g, dubuPart(part));
+            g.generateTexture('dubu-' + part, 48, 48); g.destroy();
+        }
+        for (const item of ['button', 'cap', 'stone']) {
+            const g = this.make.graphics({ x: 0, y: 0 });
+            const colour = item === 'button' ? 0xc7a278 : item === 'cap' ? 0x87a6ad : 0xb3a9cb;
+            g.fillStyle(colour).fillRect(2, 0, 5, 2).fillRect(0, 2, 9, 5).fillRect(2, 7, 5, 2);
+            g.fillStyle(0x655e71);
+            if (item === 'button') g.fillRect(3, 3, 1, 1).fillRect(5, 5, 1, 1);
+            else if (item === 'cap') g.fillRect(2, 2, 5, 1).fillRect(2, 6, 5, 1);
+            else g.fillStyle(0xded7ec).fillRect(2, 2, 3, 2);
+            g.generateTexture('dubu-item-' + item, 9, 9); g.destroy();
         }
         for (const right of [false, true]) {
             const ear = this.make.graphics({ x: 0, y: 0 });
