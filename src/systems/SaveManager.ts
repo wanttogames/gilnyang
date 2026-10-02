@@ -1,3 +1,5 @@
+import { alleyEventById } from '../data/alleyEvents';
+import { AlleyEventManager } from './AlleyEventManager';
 import { validNightCondition } from '../data/nightConditions';
 import { allCustomers } from '../data/customers';
 import { CharacterStoryManager } from './CharacterStoryManager';
@@ -8,7 +10,7 @@ import { WeatherManager } from './WeatherManager';
 import { RecipeManager } from './RecipeManager';
 export const SAVE_KEY = 'alley-cat-diner-v1';
 export const emptyReport = (): NightReport => ({ served: 0, gold: 0, perfect: 0, intimacy: {}, discoveries: [] });
-export function newSave(): SaveData { return { version: 2, gold: 0, level: 1, night: 1, weather: 'clear', customers: Object.fromEntries(customers.map(c => [c.id, { intimacy: 0, visitCount: 0, storyStage: 0, unlocked: false, preferenceFound: false, characterStory: CharacterStoryManager.restore(c.id, undefined, 0) }])), unlockedRecipes: ['rice', 'oden', 'milk'], pendingRecipeUnlocks: [], upgrades: {}, settings: { sound: true }, activeNight: null }; }
+export function newSave(): SaveData { return { version: 2, completedAlleyEvents: [], recentAlleyEventIds: [], gold: 0, level: 1, night: 1, weather: 'clear', customers: Object.fromEntries(customers.map(c => [c.id, { intimacy: 0, visitCount: 0, storyStage: 0, unlocked: false, preferenceFound: false, characterStory: CharacterStoryManager.restore(c.id, undefined, 0) }])), unlockedRecipes: ['rice', 'oden', 'milk'], pendingRecipeUnlocks: [], upgrades: {}, settings: { sound: true }, activeNight: null }; }
 export class SaveManager {
     static load(): SaveData {
         try {
@@ -32,11 +34,14 @@ export class SaveManager {
             base.weather = WeatherManager.valid(s.weather) ? s.weather : s.activeNight ? 'clear' : WeatherManager.roll(s.night);
             base.unlockedRecipes = [...new Set([...base.unlockedRecipes, ...(Array.isArray(s.unlockedRecipes) ? s.unlockedRecipes.filter((id: unknown) => recipes.some(r => r.id === id)) : [])])] as string[];
             base.pendingRecipeUnlocks = Array.isArray(s.pendingRecipeUnlocks) ? [...new Set(s.pendingRecipeUnlocks.filter((id: unknown) => typeof id === 'string' && base.unlockedRecipes.includes(id) && recipes.some(r => r.id === id && r.unlock)))] as string[] : [];
+            base.completedAlleyEvents = Array.isArray(s.completedAlleyEvents) ? [...new Set<string>(s.completedAlleyEvents.filter((id: unknown) => typeof id === 'string' && alleyEventById(id)?.once))] : [];
+            base.recentAlleyEventIds = Array.isArray(s.recentAlleyEventIds) ? s.recentAlleyEventIds.filter((id: unknown) => typeof id === 'string' && !!alleyEventById(id)).slice(-5) : [];
             base.recentCustomers = Array.isArray(s.recentCustomers) ? s.recentCustomers.filter((id: unknown) => allCustomers.some(c => c.id === id)).slice(-3) : [];
             if (s.activeNight && Array.isArray(s.activeNight.queue) && s.activeNight.queue.length > 0 && s.activeNight.queue.every((id: unknown) => typeof id === 'string' && allCustomers.some(c => c.id === id))) {
                 const r = s.activeNight.report;
                 if (r && Number.isInteger(r.served) && r.served >= 0 && r.served <= s.activeNight.queue.length && Number.isFinite(r.gold) && Number.isFinite(r.perfect) && r.intimacy && Array.isArray(r.discoveries))
                     base.activeNight = { queue: s.activeNight.queue, report: r,
+                        ...(s.activeNight.alley ? {alley: AlleyEventManager.restore(s.activeNight.alley,s.activeNight.queue.length)} : {}),
                         condition: validNightCondition(s.activeNight.condition) ? s.activeNight.condition : 'ordinary',
                         pairStarts: Array.isArray(s.activeNight.pairStarts) ? [...new Set<number>(s.activeNight.pairStarts.filter((n: unknown) => typeof n === 'number' && Number.isInteger(n) && n >= r.served && n + 1 < s.activeNight.queue.length))].filter((n, i, all) => !all.includes(n - 1)) : [],
                     };

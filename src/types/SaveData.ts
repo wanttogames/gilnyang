@@ -1,3 +1,4 @@
+import type { AlleyNightState } from './AlleyEvent';
 import type { NightConditionId } from '../data/nightConditions';
 import type { CustomerProgress } from './Customer';
 import type { Weather } from './Weather';
@@ -22,7 +23,10 @@ export interface SaveData {
         sound: boolean;
     };
     recentCustomers?: string[];
+    completedAlleyEvents?: string[];
+    recentAlleyEventIds?: string[];
     activeNight: {
+        alley?: AlleyNightState;
         condition?: NightConditionId;
         pairStarts?: number[];
         queue: string[];

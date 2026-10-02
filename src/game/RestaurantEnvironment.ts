@@ -10,17 +10,29 @@ export class RestaurantEnvironment {
     private rainTimer?: Phaser.Time.TimerEvent;
     private weather: Weather = 'clear';
     private cleaned = false;
+    private signHeld = false;
     constructor(private scene: Phaser.Scene, awning: Phaser.GameObjects.Graphics,
-        sign: Phaser.GameObjects.Container, lamps: Phaser.GameObjects.Rectangle[]) {
+        private sign: Phaser.GameObjects.Container, lamps: Phaser.GameObjects.Rectangle[]) {
         this.animate({ targets: awning, x: { from: 360, to: 361 }, angle: .3, duration: 3700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
         lamps.forEach((lamp, i) => this.animate({ targets: lamp, alpha: .94, duration: 2800 + i * 550, delay: i * 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' }));
         const sway = () => this.later(Phaser.Math.Between(5000, 9000), () => {
+            if (this.signHeld) { sway(); return; }
             this.animate({ targets: sign, angle: .8, duration: 650, yoyo: true, repeat: 1, ease: 'Sine.easeInOut' }, sway);
         });
         sway();
         this.repeat(800, 1600, () => this.bubbles());
         this.repeat(1000, 1800, () => this.steam());
         scene.events.once(Phaser.Scenes.Events.SHUTDOWN, this.cleanup, this);
+    }
+    holdSign() {
+        const angle=this.sign.angle;
+        const paused=[...this.animations].filter(t=>t.hasTarget(this.sign) && t.isPlaying());
+        this.signHeld=true;paused.forEach(t=>t.pause());let released=false;
+        return () => {
+            if(released)return;released=true;this.signHeld=false;
+            if(this.sign.active)this.sign.setAngle(angle);
+            if(!this.cleaned)paused.forEach(t=>t.resume());
+        };
     }
     private later(ms: number, action: () => void) {
         const timer = this.scene.time.delayedCall(ms, () => { this.timers.delete(timer); if (!this.cleaned) action(); });

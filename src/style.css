@@ -69,3 +69,12 @@
 .pair-order{display:flex;align-items:center;gap:14px;padding:6px 12px;background:#e6d4b7;border-radius:8px;min-height:90px}
 .pair-order>div{flex:1;min-width:0}.pair-order strong{font-size:21px}.pair-order p{font-size:17px;line-height:1.35;margin-top:5px}
 .pair-order .primary{flex:0 0 110px;width:110px;min-height:100px;margin:0;padding:12px;font-size:23px}
+
+/* Alley choices reuse the restaurant panel and stay above the bottom navigation. */
+#panel.alley-event-panel{top:770px;height:423px;padding:20px 26px}
+.alley-event-panel h2{font-size:28px;margin:8px 0 12px}
+.alley-description{font-size:23px;line-height:1.5;color:#806952;margin:12px 0 18px;word-break:keep-all}
+.alley-choices{display:flex;flex-direction:column;gap:12px}
+.alley-event-panel .primary{min-height:100px;margin-top:0;font-size:23px}
+.alley-result{white-space:pre-line;font-size:23px;line-height:1.5;color:#6c5442;min-height:150px;margin:12px 0 14px}
+.alley-gift{color:#8d6d43;font-size:18px;margin:0 0 10px}

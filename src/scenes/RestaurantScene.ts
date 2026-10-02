@@ -1,3 +1,6 @@
+import { AlleyEventManager } from '../systems/AlleyEventManager';
+import { AlleyEventView } from '../game/AlleyEventView';
+import type { AlleyEvent } from '../types/AlleyEvent';
 import { nightConditions, rollNightCondition } from '../data/nightConditions';
 import type { CustomerProgress } from '../types/Customer';
 import { customerRender } from '../game/CharacterArt';
@@ -46,13 +49,14 @@ export class RestaurantScene extends Phaser.Scene {
     save!: SaveData;
     guest?: Phaser.GameObjects.Image | NabiView | DubuView | KkamangView;
     chef!: Phaser.GameObjects.Image;
-    phase: 'closed' | 'arriving' | 'seating' | 'waiting' | 'order' | 'cooking' | 'ready' | 'eating' | 'reaction' | 'transition' | 'character-story' | 'standing' | 'farewell' | 'leaving' | 'gap' | 'result' = 'closed';
+    phase: 'closed' | 'arriving' | 'seating' | 'waiting' | 'order' | 'cooking' | 'ready' | 'eating' | 'reaction' | 'transition' | 'character-story' | 'standing' | 'farewell' | 'leaving' | 'gap' | 'alley-event' | 'result' = 'closed';
     current?: Customer;
     private currentRecipe?: Recipe;
     private environment!: RestaurantEnvironment;
     private customerMeal?: CustomerMeal;
     private guestVisit?: CustomerVisit;
     private guestGap?: Phaser.Time.TimerEvent;
+    private alleyView?: AlleyEventView;
     private quietDeparture = false;
     private activeGuests: ActiveCustomer[] = [];
     private ambientProgress = new Map<string, CustomerProgress>();
@@ -77,6 +81,7 @@ export class RestaurantScene extends Phaser.Scene {
     private stallSign!: Phaser.GameObjects.Text;
     constructor() { super('Restaurant'); }
     create() {
+        this.alleyView = undefined;
         this.lanterns = [];
         this.activeGuests = [];
         this.groupTimer = undefined; this.introTimer = undefined;
@@ -104,6 +109,7 @@ export class RestaurantScene extends Phaser.Scene {
             this.resumeNight(); });
         window.addEventListener('pagehide', this.saveOnHide);
         this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+            this.alleyView?.cleanup();
             this.groupTimer?.remove(false); this.introTimer?.remove(false);
             for (const slot of this.activeGuests) {
                 slot.visit.cleanup();
@@ -312,6 +318,8 @@ export class RestaurantScene extends Phaser.Scene {
             this.playCharacterStory('after', () => this.depart());
             return;
         }
+        const alley = AlleyEventManager.pending(this.save);
+        if (alley && !Object.values(this.save.customers).some(p=>p.characterStory?.pending)) { this.startAlleyEvent(alley); return; }
         if (this.save.activeNight!.report.served >= this.save.activeNight!.queue.length)
             this.result();
         else
@@ -382,8 +390,8 @@ export class RestaurantScene extends Phaser.Scene {
         new CookingScene(this.currentRecipe!,!!this.save.upgrades.pot,(quality,extra) => this.ready(quality,extra));
     }
     order() { if (!['waiting', 'character-story'].includes(this.phase)) return; if (this.activeGuests.length === 2) { this.chooseOrder(); return; } this.phase = 'order'; this.guestVisit?.wait(); this.lockGuestInput(false); const c = this.current!, r = this.currentRecipe = this.activeGuests[0]?.recipe ?? RecipeManager.order(c, this.save), p = this.progress(c.id); panel(`<div class="eyebrow">${this.save.activeNight!.report.served + 1} / ${this.save.activeNight!.queue.length} · 손님이 기다려요</div><div class="order-row"><div><h2>${c.name} <small>${c.species}</small></h2><p class="quote">“${DialogueManager.order(c.id, this.save.weather, r, p,this.save.activeNight?.condition)}”</p></div>${food(r.id)}</div><div class="order-bottom"><div><small>오늘의 주문</small><strong>${r.name}</strong></div><button class="primary" id="cook">요리 시작 ${icon('arrow')}</button></div>${p.characterStory?.pending?.eventId === 'KKAMANG_STORY_4' ? '<p class="preference">오늘만 · 계란 두 개를 부탁했어요</p>' : ''}${p.preferenceFound ? `<p class="preference">기억해 주세요 · ${ingredients[c.favoriteIngredients[0]].name}${c.favoriteIngredients[0] === 'warm' ? '' : ' 넉넉하게'}</p>` : ''}`); on('cook', () => this.beginCooking()); }
-    ready(q: Quality, extra: string) { this.phase = 'ready'; audio.success(); this.tweens.add({ targets: this.chef, angle: 5, duration: 140, yoyo: true, repeat: 3 }); panel(`<div class="eyebrow">정성을 담은 한 접시</div><div class="ready-row">${food(this.currentRecipe!.id)}<div><span class="quality q-${q === '완벽' ? 'perfect' : 'good'}">${q === '완벽' ? 'PERFECT · ' : ''}${q}</span><h2>${this.currentRecipe!.name}</h2><p class="muted">${extra ? ingredients[extra].name + '도 마음을 담아' : '따뜻할 때 전해 주세요.'}</p></div></div><button id="serve" class="primary">${this.current!.name}에게 음식 건네기 →</button>`); on('serve', () => this.serve(q, extra)); }
-    private get guestInputLocked() { return ['arriving', 'seating', 'waiting', 'eating', 'standing', 'farewell', 'leaving', 'gap', 'transition'].includes(this.phase); }
+    ready(q: Quality, extra: string) { if (this.phase === 'alley-event') return; this.phase = 'ready'; audio.success(); this.tweens.add({ targets: this.chef, angle: 5, duration: 140, yoyo: true, repeat: 3 }); panel(`<div class="eyebrow">정성을 담은 한 접시</div><div class="ready-row">${food(this.currentRecipe!.id)}<div><span class="quality q-${q === '완벽' ? 'perfect' : 'good'}">${q === '완벽' ? 'PERFECT · ' : ''}${q}</span><h2>${this.currentRecipe!.name}</h2><p class="muted">${extra ? ingredients[extra].name + '도 마음을 담아' : '따뜻할 때 전해 주세요.'}</p></div></div><button id="serve" class="primary">${this.current!.name}에게 음식 건네기 →</button>`); on('serve', () => this.serve(q, extra)); }
+    private get guestInputLocked() { return ['arriving', 'seating', 'waiting', 'eating', 'standing', 'farewell', 'leaving', 'gap', 'transition', 'alley-event'].includes(this.phase); }
     private lockGuestInput(locked: boolean) {
         $('nav').querySelectorAll<HTMLButtonElement>('button').forEach(button => button.disabled = locked);
     }
@@ -513,11 +521,34 @@ export class RestaurantScene extends Phaser.Scene {
                 this.phase = 'gap';
                 this.guestGap = this.time.delayedCall(400, () => {
                     this.guestGap = undefined;
-                    if (this.phase === 'gap') this.nextGuest();
+                    if (this.phase === 'gap') this.continueAfterGap();
                 });
             });
     }
-    result() { this.phase = 'result'; this.lockGuestInput(false); this.guest?.destroy(); $('caption').textContent = '불을 끄기 전, 오늘의 따뜻함을 세어 보아요.'; ResultScene.show(this.save, () => { this.save.night++; this.save.weather = WeatherManager.roll(this.save.night); this.save.activeNight = null; this.refreshWeather(); SaveManager.save(this.save); this.hud(); this.welcome(); }); }
+    private continueAfterGap() {
+        if (this.phase!=='gap' || this.activeGuests.length || this.guest?.active || this.alleyView) return;
+        if(this.quietDeparture) { this.nextGuest(); return; }
+        const event=AlleyEventManager.tryReserve(this.save);
+        SaveManager.save(this.save); // Also saves failed probability checks, preventing reload rerolls.
+        if(event)this.startAlleyEvent(event);else this.nextGuest();
+    }
+    private startAlleyEvent(event: AlleyEvent) {
+        if(this.activeGuests.length || this.guest?.active || this.alleyView) return;
+        this.phase='alley-event';this.lockGuestInput(true);
+        $('caption').textContent='작은 지붕 밖에도, 밤은 이어져요.';
+        this.alleyView=new AlleyEventView(this,event,choiceId=>{
+            if(this.phase!=='alley-event')return undefined;
+            const choice=AlleyEventManager.result(this.save,choiceId);
+            SaveManager.save(this.save);this.hud();return choice;
+        },()=>{
+            AlleyEventManager.complete(this.save);SaveManager.save(this.save);
+            this.alleyView=undefined;this.phase='gap';this.lockGuestInput(false);
+            $('caption').textContent=weatherDefinitions[this.save.weather].caption;
+            // Do not roll another event immediately at the same gap.
+            this.nextGuest();
+        },this.save.activeNight?.alley?.pending?.choiceId,()=>this.environment.holdSign());
+    }
+    result() { if (this.phase === 'alley-event') return; this.alleyView?.cleanup(); this.phase = 'result'; this.lockGuestInput(false); this.guest?.destroy(); $('caption').textContent = '불을 끄기 전, 오늘의 따뜻함을 세어 보아요.'; ResultScene.show(this.save, () => { this.save.night++; this.save.weather = WeatherManager.roll(this.save.night); this.save.activeNight = null; this.refreshWeather(); SaveManager.save(this.save); this.hud(); this.welcome(); }); }
     menu() {
         modal(`<div class="sheet-head"><div><span class="eyebrow">KITCHEN NOTES · ${this.save.unlockedRecipes.length}/5</span><h2>오늘의 메뉴</h2></div><button id="close" class="close" aria-label="닫기">×</button></div><p class="muted">재료는 늘 충분해요. 단골의 마음에서 새 메뉴를 배워요.</p>${RecipeManager.all().map(r => {
             const unlocked = this.save.unlockedRecipes.includes(r.id), u = r.unlock;
