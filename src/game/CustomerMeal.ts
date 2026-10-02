@@ -18,7 +18,7 @@ export class CustomerMeal {
     private angle: number;
     private texture?: string;
     constructor(private scene: Phaser.Scene, private guest: DongguView | Phaser.GameObjects.Image | NabiView | DubuView | KkamangView | AmbientCustomerView,
-        recipeId: string, quality: Quality, quiet: boolean, taste: () => void, complete: () => void, serving?: 'two-eggs') {
+        recipeId: string, quality: Quality, quiet: boolean, taste: () => void, complete: () => void, serving?: 'two-eggs', decorated = false) {
         this.x = guest.x; this.y = guest.y; this.angle = guest.angle;
         this.texture = guest instanceof NabiView ? undefined : guest.texture.key.replace('-blink', '');
         this.paused = scene.tweens.getTweensOf(guest).filter(tween => tween.isPlaying());
@@ -27,7 +27,8 @@ export class CustomerMeal {
         scene.events.once(Phaser.Scenes.Events.SHUTDOWN, this.cleanup, this);
         const foodX = guest.x + (guest.x > 360 ? -70 : 80);
         const direction = guest.x > 360 ? -1 : 1;
-        const plate = scene.add.ellipse(foodX, 778, 58, 13, 0xe7cda5).setDepth(2.5).setName('meal-plate');
+        const plate = scene.add.ellipse(foodX, 778, 58, 13, decorated ? recipeId === 'bread' ? 0xe6c367 : 0x91c7c2 : 0xe7cda5).setDepth(2.5).setName('meal-plate');
+        if (decorated) plate.setStrokeStyle(2, recipeId === 'bread' ? 0xa67c32 : 0x557f85);
         const food = scene.add.image(foodX, 752, 'meal-' + (recipeId === 'ramen' && serving === 'two-eggs' ? 'ramen-two-eggs' : recipeId)).setScale(2).setDepth(2.6).setName('served-food');
         food.setData('serving', serving ?? 'normal');
         this.objects.add(plate); this.objects.add(food);

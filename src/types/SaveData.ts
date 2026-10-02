@@ -2,6 +2,7 @@ import type { AlleyNightState } from './AlleyEvent';
 import type { NightConditionId } from '../data/nightConditions';
 import type { CustomerProgress } from './Customer';
 import type { Weather } from './Weather';
+import type { RecipeMastery, KitchenNight } from '../systems/KitchenManager';
 export interface NightReport {
     served: number;
     gold: number;
@@ -21,6 +22,7 @@ export interface SaveData {
     unlockedRecipes: string[];
     pendingRecipeUnlocks: string[];
     upgrades: Record<string, number>;
+    recipeMastery?: Record<string, RecipeMastery>;
     settings: {
         sound: boolean;
     };
@@ -28,6 +30,7 @@ export interface SaveData {
     completedAlleyEvents?: string[];
     recentAlleyEventIds?: string[];
     activeNight: {
+        kitchen?: KitchenNight;
         alley?: AlleyNightState;
         condition?: NightConditionId;
         pairStarts?: number[];

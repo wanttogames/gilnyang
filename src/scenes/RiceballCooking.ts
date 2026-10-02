@@ -1,5 +1,5 @@
 import type { Quality, Recipe } from '../types/Recipe';
-import type { CookingStepScore, RiceballStep } from '../types/Cooking';
+import type { CookingStepScore, RiceballStep, CookingResult } from '../types/Cooking';
 import { riceballSteps } from '../data/cookingSteps';
 import { CookingManager } from '../systems/CookingManager';
 import { audio } from '../systems/AudioManager';
@@ -17,7 +17,7 @@ export class RiceballCooking {
     private mistakes = 0;
     private lastPress = 0;
 
-    constructor(private recipe: Recipe, private pot: boolean, private extra: string, private finish: (quality: Quality, extra: string) => void) {
+    constructor(private recipe: Recipe, private pot: boolean, private extra: string, private finish: (quality: Quality, extra: string, result?: CookingResult) => void) {
         $('interface').classList.add('minigame-cooking');
         $('panel').classList.add('minigame-panel');
         this.render();
@@ -123,7 +123,7 @@ export class RiceballCooking {
             $('interface').classList.remove('minigame-cooking');
             $('nav').classList.remove('locked');
             // Let the input finish before displaying the existing serving button.
-            window.setTimeout(() => this.finish(grade.quality, this.extra), 0);
+            window.setTimeout(() => this.finish(grade.quality, this.extra, { score, quality: grade.quality, reaction: score >= 90 ? '밥과 김이 딱 알맞아요. 작은 손길까지 기억할게요.' : '모양이 조금 달라도, 따뜻한 한 끼예요.' }), 0);
         });
     }
 }

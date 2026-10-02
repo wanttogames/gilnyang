@@ -21,7 +21,12 @@ export class CookingScene {
     private firstQuality: Quality = '보통';
     private transitioning = false;
     private pressProgress?: number;
-    constructor(private recipe: Recipe, private pot: boolean, private finish: (quality: Quality, extra: string, result?: CookingResult) => void, private customer?: RamenCustomer) {
+    constructor(private recipe: Recipe, private pot: boolean, private finish: (quality: Quality, extra: string, result?: CookingResult) => void, private customer?: RamenCustomer, style?: { dish: boolean; tools: boolean }) {
+        $('interface').classList.remove('kitchen-dish', 'kitchen-tools');
+        if (style?.dish) $('interface').classList.add('kitchen-dish');
+        if (style?.tools) $('interface').classList.add('kitchen-tools');
+        const complete = this.finish;
+        this.finish = (q, extra, result) => { $('interface').classList.remove('kitchen-dish', 'kitchen-tools'); complete(q, extra, result); };
         $('nav').classList.add('locked');
         if (['oden', 'ramen', 'bread'].includes(recipe.id)) this.extras();
         else this.renderIngredients();
@@ -145,6 +150,9 @@ export class CookingScene {
             quality = value >= 1.5 ? '완벽' : value >= .5 ? '맛있음' : '보통';
         }
         $('nav').classList.remove('locked');
-        window.setTimeout(() => this.finish(quality, this.extra), 0);
+        const target = this.recipe.action === 'hold' ? 1 : .72;
+        const range = this.recipe.action === 'hold' ? .18 : this.pot ? .1 : .09;
+        const score = CookingManager.riceballTimingScore(.5 + (this.pressProgress ?? this.progress) - target, range);
+        window.setTimeout(() => this.finish(quality, this.extra, { score, quality, reaction: quality === '완벽' ? '따뜻한 온기와 딱 알맞은 양, 마음까지 편안해져요.' : '하루 끝에 따뜻하게 챙겨 줘서 고마워요.' }), 0);
     }
 }
