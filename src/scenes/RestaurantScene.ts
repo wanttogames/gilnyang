@@ -1,6 +1,6 @@
 import { DongguView } from '../game/DongguView';
 import { OwnerPrologue } from '../game/OwnerPrologue';
-import type { OdenResult } from '../systems/OdenManager';
+import type { CookingResult } from '../types/Cooking';
 import { AlleyEventManager } from '../systems/AlleyEventManager';
 import { AlleyEventView } from '../game/AlleyEventView';
 import type { AlleyEvent } from '../types/AlleyEvent';
@@ -57,7 +57,7 @@ export class RestaurantScene extends Phaser.Scene {
     phase: 'closed' | 'arriving' | 'seating' | 'waiting' | 'order' | 'cooking' | 'ready' | 'eating' | 'reaction' | 'transition' | 'character-story' | 'standing' | 'farewell' | 'leaving' | 'gap' | 'alley-event' | 'result' = 'closed';
     current?: Customer;
     private currentRecipe?: Recipe;
-    private odenResult?: OdenResult;
+    private cookingResult?: CookingResult;
     private environment!: RestaurantEnvironment;
     private customerMeal?: CustomerMeal;
     private guestVisit?: CustomerVisit;
@@ -88,6 +88,7 @@ export class RestaurantScene extends Phaser.Scene {
     private stallSign!: Phaser.GameObjects.Text;
     constructor() { super('Restaurant'); }
     create() {
+        $('panel').classList.remove('meal-reaction-panel');
         this.alleyView = undefined;
         this.lanterns = [];
         this.activeGuests = [];
@@ -424,8 +425,11 @@ export class RestaurantScene extends Phaser.Scene {
     private beginCooking() {
         if (this.phase !== 'order') return;
         this.phase='cooking'; this.setCustomerState('cooking'); this.lockGuestInput(true); audio.note(440);
-        this.odenResult = undefined;
-        new CookingScene(this.currentRecipe!,!!this.save.upgrades.pot,(quality,extra,result) => { this.odenResult = result; this.ready(quality,extra); }, this.current);
+        $('panel').classList.remove('meal-reaction-panel');
+        this.cookingResult = undefined;
+        const customer = this.current!;
+        const twoEggs = CharacterStoryManager.pendingEvent(customer.id, this.progress(customer.id))?.serving === 'two-eggs';
+        new CookingScene(this.currentRecipe!,!!this.save.upgrades.pot,(quality,extra,result) => { this.cookingResult = result; this.ready(quality,extra); }, { id: customer.id, name: customer.name, twoEggs });
     }
     order() { if (!['waiting', 'character-story'].includes(this.phase)) return; if (this.activeGuests.length === 2) { this.chooseOrder(); return; } this.phase = 'order'; this.guestVisit?.wait(); this.lockGuestInput(false); const c = this.current!, r = this.currentRecipe = this.activeGuests[0]?.recipe ?? RecipeManager.order(c, this.save), p = this.progress(c.id); panel(`<div class="eyebrow">${this.save.activeNight!.report.served + 1} / ${this.save.activeNight!.queue.length} · 손님이 기다려요</div><div class="order-row"><div><h2>${c.name} <small>${c.species}</small></h2><p class="quote">“${DialogueManager.order(c.id, this.save.weather, r, p,this.save.activeNight?.condition)}”</p></div>${food(r.id)}</div><div class="order-bottom"><div><small>오늘의 주문</small><strong>${r.name}</strong></div><button class="primary" id="cook">요리 시작 ${icon('arrow')}</button></div>${p.characterStory?.pending?.eventId === 'KKAMANG_STORY_4' ? '<p class="preference">오늘만 · 계란 두 개를 부탁했어요</p>' : ''}${p.preferenceFound ? `<p class="preference">기억해 주세요 · ${ingredients[c.favoriteIngredients[0]].name}${c.favoriteIngredients[0] === 'warm' ? '' : ' 넉넉하게'}</p>` : ''}`); on('cook', () => this.beginCooking()); }
     ready(q: Quality, extra: string) { if (this.phase === 'alley-event') return; this.phase = 'ready'; audio.success(); this.tweens.add({ targets: this.chef, angle: 5, duration: 140, yoyo: true, repeat: 3 }); panel(`<div class="eyebrow">정성을 담은 한 접시</div><div class="ready-row">${food(this.currentRecipe!.id)}<div><span class="quality q-${q === '완벽' ? 'perfect' : 'good'}">${q === '완벽' ? 'PERFECT · ' : ''}${q}</span><h2>${this.currentRecipe!.name}</h2><p class="muted">${extra ? ingredients[extra].name + '도 마음을 담아' : '따뜻할 때 전해 주세요.'}</p></div></div><button id="serve" class="primary">${this.current!.name}에게 음식 건네기 →</button>`); on('serve', () => this.serve(q, extra)); }
@@ -445,7 +449,7 @@ export class RestaurantScene extends Phaser.Scene {
         panel(`<div class="eyebrow">따뜻할 때, 천천히</div><h2>${c.name}의 한입</h2><p class="muted">${this.currentRecipe!.name} · 잠깐 쉬어 가요.</p><div class="waiting"><i></i><i></i><i></i></div>`);
         this.customerMeal = new CustomerMeal(this, this.guest, this.currentRecipe!.id, q, quiet,
             () => { if (this.guest instanceof NabiView) this.guest.taste(q, favorite, p.intimacy, p.characterStory?.stage ?? 0); else if (this.guest instanceof DubuView) this.guest.taste(q); else if (this.guest instanceof KkamangView) this.guest.taste(q, CharacterStoryManager.pendingEvent(c.id, p)?.serving === 'two-eggs'); },
-            () => { this.customerMeal = undefined; if (this.phase === 'eating') this.finishServing(q, extra, quiet); }, CharacterStoryManager.pendingEvent(c.id, p)?.serving);
+            () => { this.customerMeal = undefined; if (this.phase === 'eating') this.finishServing(q, extra, quiet); }, this.cookingResult?.serving ?? CharacterStoryManager.pendingEvent(c.id, p)?.serving);
     }
     private finishServing(q: Quality, extra: string, quiet: boolean) {
         this.phase = 'reaction'; this.setCustomerState('reacting');
@@ -459,10 +463,12 @@ export class RestaurantScene extends Phaser.Scene {
             const p = this.progress(c.id);
             this.guest.affinity(reward.intimacy, p.intimacy, p.characterStory?.stage ?? 0);
         }
-        const reaction = this.odenResult ? `${this.odenResult.reaction} ${DialogueManager.reaction(c.id, this.save.weather, reward.favorite)}` : DialogueManager.reaction(c.id, this.save.weather, reward.favorite);
+        const reaction = this.cookingResult ? `${this.cookingResult.reaction} ${DialogueManager.reaction(c.id, this.save.weather, reward.favorite)}` : DialogueManager.reaction(c.id, this.save.weather, reward.favorite);
         panel(`<div class="eyebrow">잘 먹었습니다</div><h2>${c.name}의 작은 인사</h2><p class="quote">“${reaction}”</p><div class="rewards"><span>${icon('coin')} +${reward.gold} G</span>${c.role === 'ambient' ? '' : `<span>${icon('heart')} 친밀도 +${reward.intimacy}${reward.favorite ? ' · 취향 보너스' : ''}</span>`}</div><button id="next" class="primary">${reward.stories.length || this.progress(c.id).characterStory?.pending?.part === 'after' ? '이야기 들어 주기' : this.activeGuests.length > 1 ? '남은 손님의 한 끼 준비하기' : this.save.activeNight!.report.served === this.save.activeNight!.queue.length ? '오늘 밤 마무리' : '다음 손님 맞이하기'} →</button>`);
+        if (this.cookingResult) $('panel').classList.add('meal-reaction-panel');
         on('next', () => {
             if (this.phase !== 'reaction') return;
+            $('panel').classList.remove('meal-reaction-panel');
             this.phase = 'transition';
             this.guestVisit?.pauseWaiting();
             this.showPendingRecipes(() => {

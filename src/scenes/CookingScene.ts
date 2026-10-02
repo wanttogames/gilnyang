@@ -1,5 +1,6 @@
 import { OdenCooking } from './OdenCooking';
-import type { OdenResult } from '../systems/OdenManager';
+import type { CookingResult } from '../types/Cooking';
+import type { RamenCustomer } from '../systems/RamenManager';
 import { RiceballCooking } from './RiceballCooking';
 import { RamenCooking } from './RamenCooking';
 import type { Recipe, Quality } from '../types/Recipe';
@@ -19,9 +20,9 @@ export class CookingScene {
     private firstQuality: Quality = '보통';
     private transitioning = false;
     private pressProgress?: number;
-    constructor(private recipe: Recipe, private pot: boolean, private finish: (quality: Quality, extra: string, result?: OdenResult) => void, private customer?: { id: string; name: string }) {
+    constructor(private recipe: Recipe, private pot: boolean, private finish: (quality: Quality, extra: string, result?: CookingResult) => void, private customer?: RamenCustomer) {
         $('nav').classList.add('locked');
-        if (recipe.id === 'oden') this.extras();
+        if (recipe.id === 'oden' || recipe.id === 'ramen') this.extras();
         else this.renderIngredients();
     }
     private get timed() { return this.recipe.action === 'timing' || this.recipe.action === 'flip'; }
@@ -52,7 +53,7 @@ export class CookingScene {
             return;
         }
         if (this.recipe.id === 'ramen') {
-            new RamenCooking(this.recipe, this.pot, this.extra, this.finish);
+            new RamenCooking(this.recipe, this.pot, this.extra, this.finish, this.customer);
             return;
         }
         const r = this.recipe, hold = r.action === 'hold';
