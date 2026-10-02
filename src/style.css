@@ -108,3 +108,11 @@
 .prologue-skip{min-height:54px;border:1px solid #cbb494;background:#e7d7bb;color:#80664e;border-radius:7px;padding:10px 20px;font-size:17px}
 .prologue-skip span{margin-left:8px}
 @media(prefers-reduced-motion:reduce){.prologue-skip{transition:none}}
+
+/* Oden order, texture request and the final warm serving. */
+.oden-request{display:flex;gap:8px;margin:14px 0}.oden-request>span{flex:1;padding:12px 5px;border:2px dashed #c5ac88;border-radius:8px;background:#efdfc3;text-align:center;font-size:18px;color:#755b42}.oden-request b{display:block;margin-bottom:4px}.oden-request .done{border-style:solid;border-color:#7f9571;background:#dfe6c9;color:#4c6643}
+.oden-selection{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:22px 0}.oden-selection .oden-piece{min-height:175px;gap:12px;border-color:#bda07d}.oden-selection .oden-piece:disabled{opacity:.65;background:#dce3c9}.oden-texture{padding:12px;border-radius:8px;background:#efdfc3;color:#6f543e;text-align:center;font-size:21px;margin:12px 0}.oden-serving{height:75px;display:flex;align-items:center;justify-content:center;gap:26px;position:relative;border-bottom:8px solid #c6a075;border-radius:50%;background:#e8cca2;margin:4px 0 14px}.oden-serving-steam{color:#ac7c53;font-size:35px;animation:oden-steam 1.7s ease-in-out infinite}.oden-panel .rice-result-title{margin:14px 0}.oden-panel .rice-step-results{padding:10px 20px}.oden-panel .rice-step-results>div{font-size:19px}.oden-panel button:focus-visible{outline:4px solid #5e7856;outline-offset:3px}
+@keyframes oden-steam{50%{transform:translateY(-5px);opacity:.45}}
+@media(prefers-reduced-motion:reduce){.oden-serving-steam,.oden-ready .oden-art,.oden-pluck .oden-art,.oden-bubbles i{animation:none}}
+
+#panel.oden-panel.oden-results{top:480px;height:717px}.oden-results .rice-result-title{margin:8px 0}.oden-results .rice-result-title .food{transform:none;margin:8px}.oden-results .oden-serving{height:58px}.oden-results .muted{font-size:19px;line-height:1.4;margin:12px 0}

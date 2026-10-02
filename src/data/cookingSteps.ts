@@ -8,9 +8,9 @@ export const riceballSteps: RiceballStep[] = [
 
 export const odenCooking: OdenCookingConfig = {
     pieces: [
-        { id: 'square', name: '사각 어묵', shape: 'square', duration: 6000 },
-        { id: 'triangle', name: '삼각 어묵', shape: 'triangle', duration: 7500 },
-        { id: 'round', name: '둥근 어묵', shape: 'round', duration: 9000 }
+        { id: 'square', name: '사각 어묵', shape: 'square', duration: 5200 },
+        { id: 'triangle', name: '삼각 어묵', shape: 'triangle', duration: 6500 },
+        { id: 'round', name: '둥근 어묵', shape: 'round', duration: 7800 }
     ],
     goodStart: .4,
     perfectCenter: .68,
