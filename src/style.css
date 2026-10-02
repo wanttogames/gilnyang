@@ -79,3 +79,13 @@
 .alley-event-panel .primary{min-height:100px;margin-top:0;font-size:23px}
 .alley-result{white-space:pre-line;font-size:23px;line-height:1.5;color:#6c5442;min-height:150px;margin:12px 0 14px}
 .alley-gift{color:#8d6d43;font-size:18px;margin:0 0 10px}
+/* Large, calm touch targets for Dubu's short alley search. */
+#panel.dubu-dig-panel{top:770px;height:423px;padding:20px 26px}
+.dubu-dig-panel h2{margin:8px 0;font-size:28px}
+.dig-feedback{font-size:23px;line-height:1.5;min-height:64px;color:#6c5442;margin:12px 0}
+.dig-spots{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.dig-spot{min-height:150px;border:3px solid #b59b78;background:#e7d1ae;border-radius:9px;color:#69513d;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;touch-action:manipulation;font-size:24px;padding:12px 6px}
+.dig-spot small{font-size:18px}.dig-warm{border-color:#a57545;background:#f3ddb1;box-shadow:inset 0 0 0 3px #efc887}
+.dig-soil{width:86px;height:40px;background:#9b7858;clip-path:polygon(0 100%,0 66%,15% 66%,15% 36%,33% 36%,33% 12%,66% 12%,66% 36%,85% 36%,85% 66%,100% 66%,100% 100%);box-shadow:inset 0 -10px #77563e}
+.dig-working .dig-soil{animation:dig-soil .45s ease-in-out 4}.dig-hint{font-size:18px;line-height:1.45;margin-top:12px;color:#8c7159}
+@keyframes dig-soil{50%{transform:translateY(-3px) rotate(-2deg)}}

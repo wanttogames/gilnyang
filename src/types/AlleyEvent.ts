@@ -1,3 +1,4 @@
+import type { DubuDigState } from '../game/DubuDigGame';
 import type { Weather } from './Weather';
 export type AlleyEventType = 'AMBIENT' | 'CHARACTER' | 'DISCOVERY' | 'TROUBLE';
 export type AlleyVisual = 'tin' | 'kitten' | 'dig' | 'watch' | 'wait' | 'sign' | 'menu' | 'blackout' | 'cats' | 'parcel';
@@ -26,5 +27,5 @@ export interface AlleyEvent {
 export interface AlleyNightState {
     checks: number[];
     seenIds: string[];
-    pending?: { eventId: string; choiceId?: string };
+    pending?: { eventId: string; choiceId?: string; dig?: DubuDigState };
 }

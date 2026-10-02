@@ -1,3 +1,4 @@
+import { newDubuDig, digDubu, restoreDubuDig } from '../game/DubuDigGame';
 import { alleyEvents, alleyEventById } from '../data/alleyEvents';
 import type { AlleyEvent, AlleyNightState, AlleyEventChoice } from '../types/AlleyEvent';
 import type { SaveData } from '../types/SaveData';
@@ -49,9 +50,16 @@ export class AlleyEventManager {
         }
         return choice;
     }
+    static dig(s: SaveData, spot?: number) {
+        const pending=s.activeNight?.alley?.pending;
+        if(pending?.eventId!=='dubu_dig' || pending.choiceId!=='help')return undefined;
+        const state=pending.dig ??= newDubuDig();
+        if(spot!==undefined)digDubu(state,spot);
+        return state;
+    }
     static complete(s: SaveData) {
         const event=this.pending(s);
-        if (!event || !s.activeNight!.alley!.pending!.choiceId) return false;
+        if (!event || !s.activeNight!.alley!.pending!.choiceId || s.activeNight!.alley!.pending!.dig && !s.activeNight!.alley!.pending!.dig!.found) return false;
         if (event.once && !s.completedAlleyEvents?.includes(event.id)) s.completedAlleyEvents=[...(s.completedAlleyEvents ?? []),event.id];
         delete s.activeNight!.alley!.pending; return true;
     }
@@ -59,11 +67,12 @@ export class AlleyEventManager {
         const value=raw && typeof raw==='object' ? raw as Record<string,unknown> : {};
         const validIds=(v: unknown) => Array.isArray(v) ? [...new Set(v.filter((id: unknown)=>typeof id==='string' && !!alleyEventById(id)))] as string[] : [];
         const state: AlleyNightState={checks:Array.isArray(value.checks) ? [...new Set<number>(value.checks.filter((n: unknown)=>typeof n==='number' && Number.isInteger(n) && n>=1 && n<=queueLength))].slice(0,2) : [],seenIds:validIds(value.seenIds).slice(0,2)};
-        const pending=value.pending as {eventId?:unknown;choiceId?:unknown} | undefined;
+        const pending=value.pending as {eventId?:unknown;choiceId?:unknown;dig?:unknown} | undefined;
         const event=typeof pending?.eventId==='string' ? alleyEventById(pending.eventId) : undefined;
         if (event && state.seenIds.includes(event.id)) {
             const choice=typeof pending?.choiceId==='string' && (event.choices?.some(c=>c.id===pending.choiceId) || !event.choices && pending.choiceId==='observe') ? pending.choiceId : undefined;
-            state.pending={eventId:event.id,...(choice ? {choiceId:choice} : {})};
+            const dig=event.id==='dubu_dig' && choice==='help' ? restoreDubuDig(pending?.dig) : undefined;
+            state.pending={eventId:event.id,...(choice ? {choiceId:choice} : {}),...(dig ? {dig} : {})};
         }
         return state;
     }

@@ -1,3 +1,4 @@
+import { dubuTreasures, type DubuDigState } from './DubuDigGame';
 import Phaser from 'phaser';
 import type { AlleyEvent, AlleyEventChoice } from '../types/AlleyEvent';
 import { $, panel, on } from '../ui/UI';
@@ -8,11 +9,12 @@ export class AlleyEventView {
     private tweens = new Set<Phaser.Tweens.Tween>();
     private objects = new Set<Phaser.GameObjects.GameObject>();
     private releaseSign?: () => void;
-    private phase: 'prompt' | 'animating' | 'result' | 'closed' = 'prompt';
+    private phase: 'prompt' | 'animating' | 'digging' | 'result' | 'closed' = 'prompt';
     private cleaned=false;
+    private digActor?: Phaser.GameObjects.Image;
     constructor(private scene: Phaser.Scene, private event: AlleyEvent,
         private resolve: (choiceId: string) => AlleyEventChoice | undefined,
-        private finished: () => void, savedChoice?: string, private holdSign?: () => () => void) {
+        private finished: () => void, savedChoice?: string, private holdSign?: () => () => void, private dig?: (spot?: number) => DubuDigState | undefined) {
         $('panel').classList.add('alley-event-panel');
         scene.events.once(Phaser.Scenes.Events.SHUTDOWN,this.cleanup,this);
         if (savedChoice) { this.choose(savedChoice); return; }
@@ -45,14 +47,60 @@ export class AlleyEventView {
         this.phase='animating';
         $('panel').querySelectorAll<HTMLButtonElement>('button').forEach(b=>b.disabled=true);
         for(const timer of this.timers)timer.remove(false);this.timers.clear();
+        if(this.event.id==='dubu_dig' && choice.id==='help' && this.dig) { this.startDig(); return; }
         panel(`<div class="eyebrow">골목의 작은 사건</div><h2>${this.event.title}</h2><p class="alley-description">${this.event.description}</p><p class="muted">잠깐, 골목에 귀를 기울여요.</p><div class="waiting"><i></i><i></i><i></i></div>`);
         audio.note(this.event.visual==='tin'?146:196,.15,.02);
         this.draw(choice.id);
-        this.later(this.event.visual==='blackout'?4600:2800,()=>{
-            this.phase='result';
-            panel(`<div class="eyebrow">골목의 작은 사건 · 한 장면</div><h2>${this.event.title}</h2><p class="alley-result">${choice.resultText}</p>${choice.gold?`<p class="alley-gift">작은 감사 · +${choice.gold} G</p>`:''}<button id="alley-return" class="primary">식당으로 돌아가기 →</button>`);
-            on('alley-return',()=>{if(this.phase!=='result')return;this.phase='closed';this.cleanup();this.finished();});
-        });
+        this.later(this.event.visual==='blackout'?4600:2800,()=>this.showResult(choice));
+    }
+    private showResult(choice: AlleyEventChoice) {
+        this.phase='result';$('panel').classList.remove('dubu-dig-panel');
+        panel(`<div class="eyebrow">골목의 작은 사건 · 한 장면</div><h2>${this.event.title}</h2><p class="alley-result">${choice.resultText}</p>${choice.gold?`<p class="alley-gift">작은 감사 · +${choice.gold} G</p>`:''}<button id="alley-return" class="primary">식당으로 돌아가기 →</button>`);
+        on('alley-return',()=>{if(this.phase!=='result')return;this.phase='closed';this.cleanup();this.finished();});
+    }
+    private startDig() {
+        this.digActor=this.actor('dubu',100,713);
+        $('panel').classList.add('dubu-dig-panel');
+        this.renderDig();
+    }
+    private renderDig() {
+        const state=this.dig?.();if(!state)return;
+        if(state.found){this.revealTreasure(state);return;}
+        this.phase='digging';
+        const directions=['왼쪽','가운데','오른쪽'];
+        const hint=state.sniffed===undefined ? '흙더미를 골라요. 두부가 먼저 냄새를 맡아요.' : state.missed!==undefined ? `“조금만 옆으로! ${directions[state.target]}에 있어요!”` : `“${directions[state.target]}에서 좋은 냄새가 나요!”`;
+        panel(`<div class="eyebrow">두부와 보물 찾기 · ${state.sniffed===undefined?'킁킁, 냄새 찾기':'사각사각, 살짝 파기'}</div><h2>오늘은 뭘 찾을까요?</h2><p id="dig-feedback" class="dig-feedback" aria-live="polite">${hint}</p><div class="dig-spots">${directions.map((label,i)=>`<button id="dig-${i}" class="dig-spot ${state.sniffed!==undefined && i===state.target?'dig-warm':''}" ${state.missed!==undefined && i!==state.target?'disabled':''}><span class="dig-soil" aria-hidden="true"></span><strong>${label}</strong><small>${state.sniffed===undefined?'냄새 맡기':'살짝 파보기'}</small></button>`).join('')}</div><p class="dig-hint">서두르지 않아도 돼요. 두부가 알려줄 거예요.</p>`);
+        directions.forEach((_,i)=>on('dig-'+i,()=>this.tapDig(i)));
+    }
+    private tapDig(spot:number) {
+        if(this.cleaned || this.phase!=='digging')return;
+        const previous=this.dig?.();if(!previous || previous.found || previous.missed!==undefined && spot!==previous.target)return;
+        const sniffing=previous.sniffed===undefined;
+        this.phase='animating';
+        const state=this.dig?.(spot);if(!state)return;
+        $('panel').querySelectorAll<HTMLButtonElement>('button').forEach(b=>b.disabled=true);
+        $('dig-feedback').textContent=sniffing?'킁킁… 두부가 코를 가까이 댄다.':'사각사각… 흙을 조금씩 걷어낸다.';
+        const button=$('dig-'+spot);button.classList.add('dig-working');
+        const actor=this.digActor!;
+        this.animate({targets:actor,x:80+spot*28,duration:350,ease:'Sine.easeInOut'});
+        this.later(380,()=>this.animate({targets:actor,angle:sniffing?-3:3,y:sniffing?715:717,duration:220,yoyo:true,repeat:2}));
+        audio.note(sniffing?294:392,.1,.02);
+        if(!sniffing)for(let i=0;i<3;i++){
+            const dirt=this.own(this.scene.add.rectangle(88+spot*28+i*5,752,3,3,0xac9373));
+            this.animate({targets:dirt,y:741,x:80+spot*28+i*11,alpha:0,duration:550,delay:500+i*180});
+        }
+        this.later(sniffing?1800:2100,()=>this.renderDig());
+    }
+    private revealTreasure(state:DubuDigState) {
+        this.phase='animating';
+        const item=dubuTreasures[state.treasure];
+        this.digActor!.setPosition(80+state.target*28,713);
+        const treasure=this.own(this.scene.add.image(105+state.target*28,745,'dubu-item-'+state.treasure).setScale(2));
+        this.animate({targets:treasure,y:733,duration:600,ease:'Sine.easeOut'});
+        this.animate({targets:this.digActor!,angle:3,duration:200,yoyo:true,repeat:2});
+        audio.success();
+        panel(`<div class="eyebrow">두부와 보물 찾기</div><h2>${item.name} 발견!</h2><p class="dig-feedback">${item.reaction}</p><p class="muted">두부가 작은 보물을 자랑스럽게 챙긴다.</p>`);
+        this.later(1800,()=>this.showResult({id:'help',label:'같이 확인한다',resultText:`흙 속에서 ${item.name} 발견!\n${item.reaction}\n두부가 꼬리를 흔들며 보물을 챙긴다.`}));
     }
     private draw(choice:string) {
         const scene=this.scene, visual=this.event.visual;
@@ -121,7 +169,7 @@ export class AlleyEventView {
         for(const object of this.objects)object.destroy();
         this.timers.clear();this.tweens.clear();this.objects.clear();
         this.releaseSign?.();this.releaseSign=undefined;
-        if($('panel').classList.contains('alley-event-panel')) { panel(''); $('panel').classList.remove('alley-event-panel'); }
+        if($('panel').classList.contains('alley-event-panel')) { panel(''); $('panel').classList.remove('alley-event-panel','dubu-dig-panel'); }
         this.scene.events.off(Phaser.Scenes.Events.SHUTDOWN,this.cleanup,this);
     }
 }

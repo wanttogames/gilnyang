@@ -551,7 +551,10 @@ export class RestaurantScene extends Phaser.Scene {
             $('caption').textContent=weatherDefinitions[this.save.weather].caption;
             // Do not roll another event immediately at the same gap.
             this.nextGuest();
-        },this.save.activeNight?.alley?.pending?.choiceId,()=>this.environment.holdSign());
+        },this.save.activeNight?.alley?.pending?.choiceId,()=>this.environment.holdSign(),spot=>{
+            const state=AlleyEventManager.dig(this.save,spot);
+            SaveManager.save(this.save);return state;
+        });
     }
     result() { if (this.phase === 'alley-event') return; this.alleyView?.cleanup(); this.phase = 'result'; this.lockGuestInput(false); this.guest?.destroy(); $('caption').textContent = '불을 끄기 전, 오늘의 따뜻함을 세어 보아요.'; ResultScene.show(this.save, () => { this.save.night++; this.save.weather = WeatherManager.roll(this.save.night); this.save.activeNight = null; this.refreshWeather(); SaveManager.save(this.save); this.hud(); this.welcome(); }); }
     menu() {
