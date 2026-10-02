@@ -1,3 +1,53 @@
+# 0.3.3 검증 결과 · 작은 발걸음, 또 만나요
+
+## 구조와 범위
+
+기존 손님은 왼쪽 화면 밖에서 좌석까지 하나의 tween으로 이동하고, 식사/후반 대화 후 오른쪽으로 움직인 즉시 다음 손님을 생성했습니다. 나비는 NabiView Container, 다른 손님은 Image였습니다. 식사는 CustomerMeal, 환경은 RestaurantEnvironment/WeatherView, 실제 지급은 ProgressionManager로 이미 분리돼 있었습니다.
+
+현재 RestaurantScene.phase 하나를 그대로 사용하며 seating/waiting/standing/farewell/gap을 추가했습니다. CustomerVisit은 렌더링 이동/공통 대기만 소유합니다. Customer/SaveData 상태나 queue/보상/스토리 시스템을 새로 만들지 않았습니다.
+
+소스 수정: src/game/CustomerVisit.ts(신규), src/game/NabiView.ts, src/scenes/RestaurantScene.ts. 부가 수정: package.json, package-lock.json, README.md, CHANGELOG.md, VERIFICATION.md.
+
+## 입장과 대기
+
+- 골목(-65,743) → 자리 앞(224,729) 1.15초, 0.27초 멈춤, 착석(246,733) 0.26초, 주문 전 0.24초.
+- 이동 x/y와 별개 scaleY 2.50↔2.46 발걸음, 착석 scaleY 2.42. 이동 오브젝트를 재생성하지 않습니다.
+- 공통 손님: y 1px 호흡, 랜덤 blink 2.5~5초, 랜덤 행동 4~8초. 강아지 주방 방향 갸웃, 고양이 테이블 살피기. 행동 하나가 끝난 뒤 다음을 예약합니다.
+- 나비: 기존 눈/귀/꼬리 timer/tween 그대로 재사용, 추가 대기 타이머 없음. 이동은 idle 대신 약한 꼬리, 착석 후 기존 idle.
+- 식사/스토리 중 공통 대기 중단, 기존 연출 우선. 입장/착석 전 cook 없음, 잘못된 order/nextGuest 호출 무시, 버튼 중복 조리/진행 차단.
+
+## 퇴장
+
+- 이야기 완료 → 0.16초 pause → 0.26초 일어나기 → 관계별 인사 → 골목 이동 → x=-65에서 cleanup/destroy → 0.4초 gap → 다음 손님.
+- 기존 구간 0~9 짧은 끄덕임, 10~24 주방 인사, 25+ 반짝임 1개. quiet 직후 반짝임/들뜬 반응 없음.
+- 나비 COMPLETE: 몇 걸음 나가 x=160에서 0.35초 멈춤, 작은 뒤돌아보기와 편안한 꼬리 후 퇴장. 두 번째 반짝임이나 대사 없음.
+- 미완료 characterStory.pending가 있으면 depart를 막습니다. 후반 대화/완료 stage/저장은 기존 CharacterStoryManager 그대로입니다.
+- pauseWaiting/cleanup에서 소유 timer/tween/effect 정리, destroy/shutdown listener 해제. 나비 이동 전 기존 활동 정리, 최종 제거 시 기존 NabiView.cleanup. gap timer는 Scene shutdown에서 취소합니다.
+
+## 실제 브라우저 검증
+
+Headless Chromium 153, PC 마우스 720px/모바일 터치 320·390px:
+
+- 초기 등장 → seating/waiting 기록 → 착석 완료 뒤 첫 나비 스토리/주문. 입장 중 order/nextGuest 연타 무시, 좌석 y=733, 착석 후 idle 시작.
+- 두부 친밀도 0/10/25, 나비 0/COMPLETE 35: 랜덤 대기 관측, 식사와 15G 1회 지급, standing/farewell/leaving/gap 순서, 낮은 친밀도 반짝임 없음/25+ 1개.
+- 나비 COMPLETE 퇴장 x=160에서 0.35초 멈춤, x<-55까지 실제 이동, 화면 밖 제거. gap 0.4초 내 다음 손님 생성 안 됨. 이후 다음 손님 주문 정상.
+- 제거 뒤 CustomerVisit timer/tween/effect 0, 나비 소유 timer/tween 0. 중복 depart/nextGuest 무시, 골드 변화 없음.
+- 입장 중 새로고침: 기존 주문 재진입. 퇴장 중 새로고침: 이미 지급한 12G/방문 1회 유지하고 다음 손님 재진입. 도감 열기/닫기 터치 정상.
+- 이동 중 Scene.stop 후 지연 주문/다음 손님 없음, 손님/환경 소유 리소스 0. 4회 Scene.restart 후 이전 리소스 0.
+- 실제 미완료 나비 결말 after 복원: sad 유지, depart/nextGuest 강제 호출 무시, UI 대화를 끝내면 stage 6 저장/특별 퇴장/정산/다음 밤, 골드 200 유지.
+- 실제 첫 밤 전체: intro 대화/새로고침 → 참치 주먹밥 → 두부 어묵 PERFECT → 까망 어묵 NORMAL → 몽실 우유 → 콩이 주먹밥 → 정산 → 다음 밤 통과.
+- 모바일 입장/착석/일어나기/인사/퇴장/gap 364프레임 rAF 관측 약 59.6fps, 50ms 초과 프레임 0. CustomerVisit 동시 소유 timer 최대 3(착석 후 잠깐), tween 최대 2. 실제 저사양 휴대폰 FPS는 미검증.
+- 런타임 오류 없음.
+
+## 보호된 기능과 빌드
+
+- data/, systems/, types/, CookingScene/RiceballCooking/OdenCooking, CustomerMeal, RestaurantEnvironment, WeatherView, CSS는 이전 버전과 바이트 단위로 동일합니다.
+- SaveData/LocalStorage 키 및 버전 변경 없음. 이동 중 상태는 저장하지 않습니다.
+- npm run test:story 통과: 기존 저장 호환/친밀도·방문·밤 조건/문장 복원/결말/중복 방지/다른 손님 이야기.
+- npm run build 통과. 기존 Phaser 번들 크기 경고는 유지됩니다.
+
+---
+
 # 0.3.2 검증 결과 · 보글보글, 따뜻한 한입
 
 ## 기존 구조와 수정

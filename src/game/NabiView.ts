@@ -77,6 +77,29 @@ export class NabiView extends Phaser.GameObjects.Container {
         if (this.eating) this.breathTween.pause();
         this.face();
     }
+    /** Travel replaces idle; settle restarts the existing random eyes/ears afterwards. */
+    walking() {
+        if (this.cleaned) return;
+        for (const timer of this.timers) timer.remove(false);
+        this.timers.clear();
+        for (const tween of [...this.animations]) this.stop(tween);
+        this.clearEffects();
+        this.started = false; this.eating = false; this.blinking = false;
+        this.storyEmotion = undefined; this.foodMood = undefined; this.affection = false;
+        this.bodyRoot.setPosition(0, 0).setAngle(0); this.ears.forEach(ear => ear.setAngle(0)); this.face();
+        this.tail.setAngle(-3);
+        this.tailTween = this.animate({ targets: this.tail, angle: 3, duration: 450, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    }
+    farewell(familiar: boolean, friend: boolean, quiet: boolean, sparkle = true) {
+        if (this.cleaned) return;
+        this.stop(this.tailTween);
+        const range = quiet ? 3 : friend ? 12 : familiar ? 8 : 3;
+        this.tail.setAngle(-range);
+        this.tailTween = this.animate({ targets: this.tail, angle: range, duration: 650, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+        if (familiar && !quiet) this.perkEars();
+        this.bodyImage.setTexture(friend && !quiet ? 'nabi-body-blink' : 'nabi-body');
+        if (friend && !quiet && sparkle) this.sparkles(1);
+    }
     beginEating() { this.eating = true; this.breathTween?.pause(); }
     endEating() { this.eating = false; this.breathTween?.resume(); }
     private scheduleBlink() {
@@ -87,7 +110,7 @@ export class NabiView extends Phaser.GameObjects.Container {
     }
     private scheduleEars() {
         this.later(Phaser.Math.Between(4000, 8000), () => {
-            if (this.mood !== 'sad') this.perkEars();
+            if (this.mood !== 'sad' && !this.eating) this.perkEars();
             this.scheduleEars();
         });
     }
