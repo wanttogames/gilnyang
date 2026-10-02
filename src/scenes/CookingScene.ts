@@ -3,6 +3,7 @@ import type { CookingResult } from '../types/Cooking';
 import type { RamenCustomer } from '../systems/RamenManager';
 import { RiceballCooking } from './RiceballCooking';
 import { RamenCooking } from './RamenCooking';
+import { BreadCooking } from './BreadCooking';
 import type { Recipe, Quality } from '../types/Recipe';
 import { ingredients } from '../data/ingredients';
 import { CookingManager } from '../systems/CookingManager';
@@ -22,7 +23,7 @@ export class CookingScene {
     private pressProgress?: number;
     constructor(private recipe: Recipe, private pot: boolean, private finish: (quality: Quality, extra: string, result?: CookingResult) => void, private customer?: RamenCustomer) {
         $('nav').classList.add('locked');
-        if (recipe.id === 'oden' || recipe.id === 'ramen') this.extras();
+        if (['oden', 'ramen', 'bread'].includes(recipe.id)) this.extras();
         else this.renderIngredients();
     }
     private get timed() { return this.recipe.action === 'timing' || this.recipe.action === 'flip'; }
@@ -44,6 +45,10 @@ export class CookingScene {
         on('no-extra', () => this.action());
     }
     private action() {
+        if (this.recipe.id === 'bread') {
+            new BreadCooking(this.recipe, this.pot, this.extra, this.finish, this.customer);
+            return;
+        }
         if (this.recipe.id === 'rice') {
             new RiceballCooking(this.recipe, this.pot, this.extra, this.finish);
             return;

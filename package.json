@@ -1,7 +1,7 @@
 {
   "name": "gilnyang",
   "private": true,
-  "version": "0.4.6",
+  "version": "0.4.7",
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
@@ -12,7 +12,8 @@
     "test:alley": "node tests/alley-events.cjs",
     "test:dig": "node tests/dubu-dig.cjs",
     "test:oden": "node tests/oden-cooking.cjs",
-    "test:ramen": "node tests/ramen-cooking.cjs"
+    "test:ramen": "node tests/ramen-cooking.cjs",
+    "test:bread": "node tests/bread-cooking.cjs"
   },
   "dependencies": {
     "phaser": "^3.90.0"
