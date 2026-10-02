@@ -1,5 +1,6 @@
 import { OdenCooking } from './OdenCooking';
 import { RiceballCooking } from './RiceballCooking';
+import { RamenCooking } from './RamenCooking';
 import type { Recipe, Quality } from '../types/Recipe';
 import { ingredients } from '../data/ingredients';
 import { CookingManager } from '../systems/CookingManager';
@@ -46,6 +47,10 @@ export class CookingScene {
         }
         if (this.recipe.id === 'oden') {
             new OdenCooking(this.recipe, this.pot, this.extra, this.finish);
+            return;
+        }
+        if (this.recipe.id === 'ramen') {
+            new RamenCooking(this.recipe, this.pot, this.extra, this.finish);
             return;
         }
         const r = this.recipe, hold = r.action === 'hold';

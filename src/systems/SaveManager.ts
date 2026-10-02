@@ -12,6 +12,10 @@ export const SAVE_KEY = 'alley-cat-diner-v1';
 export const emptyReport = (): NightReport => ({ served: 0, gold: 0, perfect: 0, intimacy: {}, discoveries: [] });
 export function newSave(): SaveData { return { version: 2, completedAlleyEvents: [], recentAlleyEventIds: [], gold: 0, level: 1, night: 1, weather: 'clear', customers: Object.fromEntries(customers.map(c => [c.id, { intimacy: 0, visitCount: 0, storyStage: 0, unlocked: false, preferenceFound: false, characterStory: CharacterStoryManager.restore(c.id, undefined, 0) }])), unlockedRecipes: ['rice', 'oden', 'milk'], pendingRecipeUnlocks: [], upgrades: {}, settings: { sound: true }, activeNight: null }; }
 export class SaveManager {
+    /** Remove only this game's save slot. */
+    static reset(): void {
+        localStorage.removeItem(SAVE_KEY);
+    }
     static load(): SaveData {
         try {
             const raw = localStorage.getItem(SAVE_KEY);

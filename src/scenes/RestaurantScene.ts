@@ -300,7 +300,23 @@ export class RestaurantScene extends Phaser.Scene {
             this.add.rectangle(520, 742, 58, 8, 0xb16f66);
         }
     }
-    hud() { $('hud').innerHTML = `<div class="topline"><span class="mini-brand">골목의 작은 불빛</span><button id="sound" class="sound" aria-label="소리 ${this.save.settings.sound ? '끄기' : '켜기'}">${icon('sound')}<span>${this.save.settings.sound ? 'ON' : 'OFF'}</span></button></div><div class="stats"><div>${icon('moon')}<span><small>오늘의 밤</small><b>${this.save.night}<em>번째 밤</em></b></span></div><div>${icon('coin')}<span><small>보유 골드</small><b>${this.save.gold}<em>G</em></b></span></div><div>${icon('star')}<span><small>식당 레벨</small><b>${this.save.level}<em>LV</em></b></span></div></div>`; on('sound', () => { audio.unlock(); this.save.settings.sound = audio.toggle(); SaveManager.save(this.save); this.hud(); }); }
+    hud() { $('hud').innerHTML = `<div class="topline"><span class="mini-brand">골목의 작은 불빛</span><div class="hud-actions"><button id="sound" class="sound" aria-label="소리 ${this.save.settings.sound ? '끄기' : '켜기'}">${icon('sound')}<span>${this.save.settings.sound ? 'ON' : 'OFF'}</span></button><button id="settings" class="sound settings-button" aria-label="설정">설정</button></div></div><div class="stats"><div>${icon('moon')}<span><small>오늘의 밤</small><b>${this.save.night}<em>번째 밤</em></b></span></div><div>${icon('coin')}<span><small>보유 골드</small><b>${this.save.gold}<em>G</em></b></span></div><div>${icon('star')}<span><small>식당 레벨</small><b>${this.save.level}<em>LV</em></b></span></div></div>`; on('sound', () => { audio.unlock(); this.save.settings.sound = audio.toggle(); SaveManager.save(this.save); this.hud(); }); on('settings', () => this.settings()); }
+    private settings() {
+        modal(`<div class="sheet-head"><div><div class="eyebrow">작은 식당 설정</div><h2>설정</h2></div><button id="settings-close" class="close" aria-label="닫기">×</button></div><p class="muted">이 식당의 진행은 이 브라우저에 자동 저장돼요.</p><button id="reset-save" class="danger-button">처음부터 다시하기</button><p class="settings-note">골드, 손님 친밀도와 이야기, 레시피, 가게 꾸미기도 처음 상태로 돌아가요.</p>`);
+        on('settings-close', closeModal);
+        on('reset-save', () => this.confirmReset());
+    }
+    private confirmReset() {
+        modal(`<div class="sheet-head"><div><div class="eyebrow">저장 데이터 지우기</div><h2>정말 처음부터 시작할까요?</h2></div></div><p class="reset-warning">오늘 밤의 진행과 저장 내용이 모두 사라져요. 다시 되돌릴 수 없어요.</p><div class="confirm-actions"><button id="reset-cancel" class="secondary">취소</button><button id="reset-confirm" class="danger-button">저장 삭제 후 시작</button></div>`);
+        on('reset-cancel', () => this.settings());
+        on('reset-confirm', () => {
+            // Prevent pagehide autosave from recreating the old slot after removal.
+            window.removeEventListener('pagehide', this.saveOnHide);
+            SaveManager.reset();
+            closeModal();
+            window.location.reload();
+        });
+    }
     nav() { $('nav').innerHTML = `<button id="menu-nav">${icon('menu')}<span>메뉴</span></button><button id="guests-nav">${icon('heart')}<span>손님</span></button><button id="shop-nav">${icon('shop')}<span>가게</span></button><button id="book-nav">${icon('book')}<span>도감</span></button>`; on('menu-nav', () => { if (!this.guestInputLocked) this.menu(); }); on('guests-nav', () => { if (!this.guestInputLocked) CustomerBookScene.open(this.save); }); on('book-nav', () => { if (!this.guestInputLocked) CustomerBookScene.open(this.save); }); on('shop-nav', () => { if (!this.guestInputLocked) this.shop(); }); }
     welcome() { this.phase = 'closed'; $('caption').textContent = weatherDefinitions[this.save.weather].caption; panel(`<div class="eyebrow">A LITTLE RESTAURANT, A WARM NIGHT</div><h1>길냥이 식당</h1><p class="muted">${weatherDefinitions[this.save.weather].greeting}</p><button class="primary" id="start">${this.save.night === 1 ? '첫 밤의 문 열기' : '오늘 밤 영업 시작'} <span>→</span></button><div class="panel-foot">${icon('save')} 자동 저장 · 느긋하게 즐겨도 괜찮아요</div>`); on('start', () => { if (this.phase !== 'closed') return; audio.unlock(); audio.note(392, .25); const condition = rollNightCondition(this.save.weather);
             const queue = CustomerManager.queue(this.save, Math.random, condition);
