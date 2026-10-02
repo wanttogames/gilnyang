@@ -42,10 +42,10 @@ export class CustomerMeal {
             if (!quiet) {
                 taste();
                 if (!(guest instanceof NabiView)) {
-                    this.animate({ targets: guest, y: this.y + (quality === '완벽' ? -2 : 1), angle: this.angle + (quality === '보통' ? 2 : 0), duration: 160, yoyo: true });
+                    this.animate({ targets: guest, y: this.y + (this.texture === 'kkamang' ? 0 : quality === '완벽' ? -2 : 1), angle: this.angle + (quality === '보통' ? (this.texture === 'kkamang' ? .5 : 2) : 0), duration: 160, yoyo: true });
                     if (quality !== '보통') {
                         guest.setTexture(this.texture!.replace('-blink', '') + '-blink');
-                        for (let i = 0; i < (quality === '완벽' ? 3 : 2); i++) {
+                        for (let i = 0; i < (this.texture === 'kkamang' ? 1 : quality === '완벽' ? 3 : 2); i++) {
                             const star = scene.add.image(this.x - 28 + i * 25, this.y - 50, 'nabi-spark').setScale(1.5).setDepth(3).setName('meal-spark');
                             this.objects.add(star);
                             this.animate({ targets: star, y: star.y - 14, alpha: 0, duration: 600 });

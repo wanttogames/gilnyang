@@ -1,11 +1,11 @@
 import Phaser from 'phaser';
-import { characterPixels, drawPixels, nabiEar, nabiTail } from '../game/CharacterArt';
+import { characterPixels, drawPixels, hasCharacterArt, nabiEar, nabiTail } from '../game/CharacterArt';
 import { customers } from '../data/customers';
 export class BootScene extends Phaser.Scene {
     constructor() { super('Boot'); }
     create() {
         for (const c of [{ id: 'chef', color: 0xd6c6b6, accent: 0x918275, dog: false }, ...customers]) {
-            if (c.id === 'nabi' || c.id === 'dubu') {
+            if (hasCharacterArt(c.id)) {
                 for (const layer of c.id === 'nabi' ? ['', '-body'] : ['']) {
                     for (const blink of [false, true]) {
                         const g = this.make.graphics({ x: 0, y: 0 });

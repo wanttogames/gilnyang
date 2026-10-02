@@ -1,3 +1,41 @@
+# 0.3.5 검증 결과 · 골목 친구들의 다섯 얼굴
+
+## 기존 구조 및 최소 변경
+
+콩이/까망/몽실은 모두 48×48 Graphics 생성 normal/blink 텍스처를 쓰는 Phaser Image입니다. 별도 atlas/외부 sprite sheet/분리된 귀·꼬리 프레임은 없었습니다. CustomerVisit이 공통 호흡/랜덤 blink/고개 갸웃·살피기/입장·착석·퇴장을 담당하며 CustomerMeal이 공통 식사를 담당합니다. 나비는 기존 NabiView의 분리된 body/귀/꼬리 Container입니다.
+
+CharacterArt에 세 디자인과 타입 가드만 추가하고 Boot의 기존 텍스처 생성 분기에 연결했습니다. 모든 texture key, 48×48 크기, 중심 origin, 발 하단 47px을 유지합니다. 새 tail timer/행동 시스템은 만들지 않았습니다. 까망은 CustomerMeal의 기존 tween에서 들뜬 y 점프를 0으로, NORMAL 끄덕임을 0.5도로, GOOD/PERFECT 반짝임을 1개로만 줄였습니다. 시간·입력 잠금·보상·cleanup은 동일합니다. 몽실은 기존 공통 blink/고개 갸웃/작은 식사 반응을 재사용합니다.
+
+소스 변경: src/game/CharacterArt.ts, src/scenes/BootScene.ts, src/data/customers.ts, src/game/CustomerMeal.ts. 버전/문서 변경: package.json, package-lock.json, README.md, CHANGELOG.md, VERIFICATION.md.
+
+## 디자인 및 텍스트
+
+- 콩이: 고등어태비 고양이, 회갈색/짙은 회색, 큰 M 이마와 굵은 몸 줄무늬, 세 링 꼬리, 조금 다부진 길냥이 자세. kong ID/성격/취향/스토리 유지.
+- 까망: 차콜/거의 검정/푸른 회색 명도, 가는 황금 눈, 높게 선 귀, 긴 몸과 몸에 붙인 가는 꼬리. 밤 배경에서 얼굴/실루엣 구분.
+- 몽실: 둥근 계단형 볼·목·가슴털, 밝은 황갈색/크림, 작은 귀와 얼굴, 눈 하이라이트/웃는 입, 등 뒤의 풍성한 꼬리. 두부의 단단한 링 꼬리와 구분.
+- 나비/두부의 normal/blink 및 나비 body/blink/좌우 귀/꼬리 픽셀을 이전 CharacterArt와 비교해 완전히 동일함을 확인.
+- 주인공/보리/달이/호두 normal/blink, 음식 5종, 하트/반짝임도 이전 텍스처와 PNG 픽셀 비교 동일.
+- src/data, ui, systems에서 삼색/calico 검색: 콩이 종 표기 외 대사·스토리 충돌 없음. 현재 삼색 표기는 나비에만 남음.
+- 기존 도감의 다섯 주요 portrait를 같은 CharacterArt 데이터로 자동 생성. 미발견 실루엣 유지. 대화/주문창에는 원래 캐릭터 초상화가 없으므로 새 UI를 만들지 않음.
+
+## 브라우저 및 회귀 검증
+
+Headless Chromium 153, PC 720px 마우스, 모바일 320/390px 터치 에뮬레이션 기준입니다. 실물 스마트폰 테스트는 하지 않았습니다.
+
+- 다섯 캐릭터 96/48/32px 및 검정 실루엣 비교 화면 시각 검토. 고양이 몸/귀/꼬리와 강아지 체형/털/꼬리 차이 확인.
+- 실제 RestaurantScene 밤 배경에 다섯 캐릭터 비교 배치, 320/390px에서 무늬/눈/털/꼬리 식별 확인. 도감 SVG 5개 정상 로드와 실루엣 일치.
+- 실제 첫 밤 UI: 나비 이야기 새로고침 복원 → 주먹밥 PERFECT → 두부 어묵 PERFECT → 까망 어묵 NORMAL → 몽실 우유 → 콩이 주먹밥 → 정산/다음 밤 통과.
+- 기존 나비/두부 입장·착석·대기·blink·귀·꼬리, 친밀도 0/10/25 인사, 나비 story 1/6 퇴장, 화면 밖 제거/공백/다음 손님, 입장·퇴장 중 새로고침, 모달 터치, Scene cleanup 통과.
+- NORMAL/GOOD/PERFECT 식사, 먹는 동안 보상 지연, 중복 serve 차단, 골드/친밀도 1회 지급과 저장 복원, 나비 하트/품질 반응, quiet 스토리 우선순위 통과. 기존 테스트의 까망 반짝임 기대값만 새 반응 강도 1개로 맞춰 검증.
+- 320px 실제 방문 UI: v1 저장에서 콩이/까망/몽실 친밀도 24·방문 4회 복원, 순차 착석/주문/식사/보상, 기존 5회 일반 이야기, 레시피 해금 팝업 터치, 퇴장/정산/다음 밤/새로고침 후 방문 5회·storyStage 1 유지 통과. 까망 PERFECT 반응에서 y=733 유지 및 반짝임 1개 확인.
+- 기존 비/날씨 전환/환경 idle, timer/tween/effect 제한, Scene 재시작 cleanup, 브라우저 오류 없음 통과.
+- npm run test:story: v1/v2 저장 호환, 방문/밤/친밀도 조건, 대화 커서, 완료/중복 방지, 다른 캐릭터 해금 통과.
+- npm run build: TypeScript/Vite 성공. 기존 Phaser 번들 크기 경고만 있음.
+
+SaveData, 캐릭터 ID, 스토리/대화 데이터, 요리/레시피/보상/날씨/방문 흐름 시스템은 변경하지 않았습니다.
+
+---
+
 # 0.3.4 검증 결과 · 삼색 무늬와 말린 꼬리
 
 ## 기존 구조 및 수정 범위
