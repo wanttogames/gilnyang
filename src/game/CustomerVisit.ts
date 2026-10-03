@@ -13,7 +13,7 @@ export class CustomerVisit {
     static readonly entrance = { x: -65, y: 743 };
     private timers = new Set<Phaser.Time.TimerEvent>();
     private animations = new Set<Phaser.Tweens.Tween>();
-    private effects = new Set<Phaser.GameObjects.Image>();
+    private effects = new Set<Phaser.GameObjects.Image | Phaser.GameObjects.Rectangle>();
     private shadow: Phaser.GameObjects.Ellipse;
     private walkingTween?: Phaser.Tweens.Tween;
     private waiting = false;
@@ -60,7 +60,7 @@ export class CustomerVisit {
             this.stop(this.walkingTween); this.guest.setScale(customerRender.scale); done();
         });
     }
-    enter(seating: () => void, seated: () => void, ready: () => void) {
+    enter(seating: () => void, seated: () => void, ready: () => void, wet?: () => void) {
         const dubu = this.guest instanceof DubuView ? this.guest : undefined;
         const arrive = () => {
             if (dubu && !dubu.quietArrival) this.animate({ targets: dubu, x: (this.seat.x - 22), angle: -3, duration: 170 }, seat);
@@ -72,7 +72,15 @@ export class CustomerVisit {
             this.animate({ targets: this.guest, angle: this.guest instanceof KkamangView ? .5 : this.dog ? -2 : 1.5, duration: 120, yoyo: true });
             this.later(this.guest instanceof KkamangView ? 360 : 270, () => this.animate({ targets: this.guest, ...this.seat, scaleY: customerRender.seatedScaleY, duration: 260, ease: 'Sine.easeOut' }, () => { seated(); this.later(dubu ? 330 : 240, ready); }));
         };
-        this.walk((this.seat.x - 22) + (dubu && !dubu.quietArrival ? 4 : 0), (this.seat.y - 4), dubu ? dubu.quietArrival ? 1400 : 850 : this.guest instanceof KkamangView ? this.guest.quietArrival ? 1450 : 1300 : 1150, arrive);
+        this.walk((this.seat.x - 22) + (dubu && !dubu.quietArrival ? 4 : 0), (this.seat.y - 4), dubu ? dubu.quietArrival ? 1400 : 850 : this.guest instanceof KkamangView ? this.guest.quietArrival ? 1450 : 1300 : 1150, () => { if(wet)this.shakeRain(()=>{wet();arrive();});else arrive(); });
+    }
+    private shakeRain(done: () => void) {
+        for(let i=0;i<6;i++) {
+            const drop=this.scene.add.rectangle(this.guest.x+(i-3)*9,this.guest.y-28-(i%2)*12,3,7,0xb6d4e3,.85).setDepth(this.guest.depth+.1).setName('rain-guest-drop');
+            this.effects.add(drop);
+            this.animate({targets:drop,x:drop.x+(i<3?-25:25),y:drop.y+40,alpha:0,duration:500+i*35},()=>{this.effects.delete(drop);drop.destroy();});
+        }
+        this.animate({targets:this.guest,angle:{from:-6,to:6},duration:75,yoyo:true,repeat:3},()=>{this.guest.setAngle(0);done();});
     }
     restoreSeat() { this.guest.setPosition(this.seat.x, this.seat.y).setAngle(0).setScale(customerRender.scale, customerRender.seatedScaleY); this.syncShadow(); }
     wait() {

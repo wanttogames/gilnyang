@@ -24,6 +24,7 @@ export interface SaveData {
     pendingRecipeUnlocks: string[];
     upgrades: Record<string, number>;
     recipeMastery?: Record<string, RecipeMastery>;
+    alleyRumor?: import('../systems/RumorManager').RumorState;
     restaurantDecor?: import('../systems/DecorationManager').RestaurantDecor;
     specialOrderHistory?: Record<string, import('../systems/SpecialOrderManager').SpecialOrderHistory>;
     settings: {
@@ -34,6 +35,8 @@ export interface SaveData {
     recentAlleyEventIds?: string[];
     activeNight: {
         kitchen?: KitchenNight;
+        referrals?: Record<string,string>;
+        rainEvent?: import('../systems/RainNightManager').RainNightEvent;
         specialOrders?: Record<string, import('../systems/SpecialOrderManager').SpecialOrder | null>;
         alley?: AlleyNightState;
         condition?: NightConditionId;

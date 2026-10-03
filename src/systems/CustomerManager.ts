@@ -1,6 +1,7 @@
 import { customers, customerById } from '../data/customers';
 import { ambientCustomers } from '../data/ambientCustomers';
 import { nightConditions, type NightConditionId } from '../data/nightConditions';
+import { RumorManager } from './RumorManager';
 import { CharacterStoryManager } from './CharacterStoryManager';
 import type { SaveData } from '../types/SaveData';
 export class CustomerManager {
@@ -21,6 +22,7 @@ export class CustomerManager {
         return !!gate && p.visitCount+1>=gate[0] && p.intimacy+possibleGain>=gate[1];
     }
     static queue(s: SaveData, random = Math.random, condition: NightConditionId = 'ordinary'): string[] {
+        const walkIns = ambientCustomers.filter(c=>!c.referralOnly || RumorManager.state(s).unlocked.includes(c.id));
         const available = customers.filter(c => c.unlockNight <= s.night);
         const due = available.filter(c => this.storyReady(s, c.id));
         // One guaranteed story per night. Rotate contenders fairly even with old high-affinity saves.
@@ -38,7 +40,7 @@ export class CustomerManager {
             // Guarantee a regular from the principal cast, independently of random ambient choices.
             const principal = eligible.filter(c => ['nabi','dubu','kkamang','mongsil','kong','donggu'].includes(c.id));
             const main = (result.length === total - 1 && !result.some(id => ['nabi','dubu','kkamang','mongsil','kong','donggu'].includes(id)) || random() < .35) && eligible.length;
-            let pool = main ? (principal.length ? principal : eligible) : ambientCustomers;
+            let pool = main ? (principal.length ? principal : eligible) : walkIns;
             const fresh = pool.filter(c => !history.slice(-3).includes(c.id));
             if (fresh.length) pool = fresh;
             const weighted = pool.map(c => ({id:c.id, weight: c.id === 'kkamang' && s.weather === 'rain' ? 4 : c.role === 'ambient' ? ambientCustomers.find(a => a.id === c.id)!.spawnWeight : 1}));

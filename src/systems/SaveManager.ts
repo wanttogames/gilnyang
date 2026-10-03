@@ -8,6 +8,8 @@ import { customers } from '../data/customers';
 import { recipes } from '../data/recipes';
 import { WeatherManager } from './WeatherManager';
 import { RecipeManager } from './RecipeManager';
+import { RumorManager } from './RumorManager';
+import { RainNightManager } from './RainNightManager';
 import { DecorationManager } from './DecorationManager';
 import { SpecialOrderManager } from './SpecialOrderManager';
 import { LetterManager } from './LetterManager';
@@ -40,6 +42,7 @@ export class SaveManager {
             base.gold = s.gold;
             base.recipeMastery = KitchenManager.restoreMastery(s.recipeMastery);
             base.night = s.night;
+            base.alleyRumor = RumorManager.migrate(base,s.alleyRumor);
             base.prologueSeen = typeof s.prologueSeen === 'boolean' ? s.prologueSeen : s.night > 1;
             base.level = Math.max(1, Math.floor(s.level || 1));
             base.upgrades = Object.fromEntries(['lamp', 'chair', 'pot', 'sign'].map(id => [id, s.upgrades?.[id] === 1 ? 1 : 0]));
@@ -62,6 +65,8 @@ export class SaveManager {
             RecipeManager.discover(base);
             if (base.activeNight) {
                 base.activeNight.kitchen = KitchenManager.restoreNight(base, s.activeNight.kitchen);
+                base.activeNight.referrals = RumorManager.restoreReferrals(s.activeNight.referrals);
+                base.activeNight.rainEvent = base.weather==='rain' ? RainNightManager.restore(s.activeNight.rainEvent) : undefined;
                 base.activeNight.specialOrders = SpecialOrderManager.restoreNight(base, s.activeNight.specialOrders);
             }
             return base;

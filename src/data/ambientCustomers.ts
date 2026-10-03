@@ -2,6 +2,7 @@ import type { Customer } from '../types/Customer';
 export interface AmbientCustomer extends Customer {
     role: 'ambient';
     spawnWeight: number;
+    referralOnly?: boolean;
     dialogues: string[];
     thanks: string[];
     look: 'corgi' | 'white' | 'kitten' | 'beagle' | 'elder' | 'grey' | 'round';
@@ -20,4 +21,8 @@ export const ambientCustomers: AmbientCustomer[] = definitions.map(([key,name,sp
     favoriteFoodIds: [...foods], favoriteIngredients: [], unlockNight: 1, spawnWeight: 1,
     dialogues: [...lines], thanks: ['잘 먹었어요. 골목에서 또 만나요.','한 끼 먹고 나니 따뜻해졌어요.','잠깐 쉬어 갈 수 있어서 좋았어요.'],
 }));
+ambientCustomers.push(
+    { id: 'ambient_soli', role: 'ambient', referralOnly: true, name: '솔이', species: '크림 고양이', personality: '소문을 듣고 찾아온 조용한 여행자', dog: false, color: 0xe8d8b6, accent: 0xb69b78, look: 'white', favoriteFoodIds: ['milk','rice'], favoriteIngredients: [], unlockNight: 1, spawnWeight: 1, dialogues: ['추천받고 왔는데, 정말 포근한 식당이네요.','골목 끝 불빛을 따라왔어요.'], thanks: ['소문처럼 다정한 한 끼네요. 또 올게요.'] },
+    { id: 'ambient_lulu', role: 'ambient', referralOnly: true, name: '루루', species: '웰시코기', personality: '맛있는 소문을 따라오는 활발한 친구', dog: true, color: 0xa57653, accent: 0xf3e3bf, look: 'corgi', favoriteFoodIds: ['oden','ramen'], favoriteIngredients: [], unlockNight: 1, spawnWeight: 1, dialogues: ['여기서 부탁한 대로 만들어 준다면서요?','맛있는 소문이 골목 너머까지 났어요!'], thanks: ['이 맛을 친구들에게도 이야기해 줘야겠어요!'] }
+);
 export const ambientById = (id: string) => ambientCustomers.find(c => c.id === id);

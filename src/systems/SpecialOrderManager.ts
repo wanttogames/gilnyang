@@ -1,3 +1,4 @@
+import { RumorManager } from './RumorManager';
 import { specialOrders, specialOrderReactions } from '../data/specialOrders';
 import { recipeById } from '../data/recipes';
 import type { SaveData } from '../types/SaveData';
@@ -33,7 +34,8 @@ export class SpecialOrderManager {
         const history = s.specialOrderHistory ??= {}, previous = history[id];
         history[id] = { completed: (previous?.completed ?? 0) + Number(success), lastNight: s.night };
         if (success) { s.gold += this.bonusGold; night.report.gold += this.bonusGold; night.report.discoveries.push('단골 특별 주문 · ' + recipeById(order.recipeId).name + ' 성공'); }
-        return { success, gold: success ? this.bonusGold : 0, intimacy: success ? this.bonusIntimacy : 0, reaction: success ? specialOrderReactions[id] : '조금 달라도 괜찮아요. 따뜻한 한 끼 잘 먹었어요.' };
+        const referral = success ? RumorManager.success(s,id) : undefined;
+        return { success, referral, gold: success ? this.bonusGold : 0, intimacy: success ? this.bonusIntimacy : 0, reaction: success ? specialOrderReactions[id] : '조금 달라도 괜찮아요. 따뜻한 한 끼 잘 먹었어요.' };
     }
     static restoreHistory(value: unknown): Record<string, SpecialOrderHistory> {
         const raw = value && typeof value === 'object' ? value as Record<string, unknown> : {}, result: Record<string, SpecialOrderHistory> = {};

@@ -6,6 +6,7 @@ import { CookingManager } from './CookingManager';
 import { DialogueManager } from './DialogueManager';
 import { SaveManager } from './SaveManager';
 import { customerById } from '../data/customers';
+import { RainNightManager } from './RainNightManager';
 import { SpecialOrderManager } from './SpecialOrderManager';
 import { KitchenManager } from './KitchenManager';
 export class ProgressionManager {
@@ -13,12 +14,13 @@ export class ProgressionManager {
         const c = customerById(id), p = s.customers[id], r = s.activeNight!.report;
         const reward = CookingManager.reward(q);
         const kitchen = meal ? KitchenManager.record(s, meal.recipeId, meal.score, q, r.served) : undefined;
+        const rainReaction = meal ? RainNightManager.finish(s,id,meal.recipeId) : undefined;
         s.recentCustomers = [...(s.recentCustomers ?? []), id].slice(-3);
         if (c.role === 'ambient') {
             s.gold += reward.gold; r.gold += reward.gold;
             r.perfect += q === '완벽' ? 1 : 0; r.served++;
             SaveManager.save(s);
-            return { gold: reward.gold + (kitchen?.bonusGold ?? 0), intimacy: 0, favorite: false, stories: [] as string[], kitchen };
+            return { gold: reward.gold + (kitchen?.bonusGold ?? 0), intimacy: 0, favorite: false, stories: [] as string[], kitchen, rainReaction };
         }
         const specialOrder = SpecialOrderManager.resolve(s, id, meal, extra);
         const favorite = p.preferenceFound && extra === c.favoriteIngredients[0];
@@ -39,6 +41,6 @@ export class ProgressionManager {
         for (const recipeId of newRecipes)
             r.discoveries.push('새 레시피 · ' + recipeById(recipeId).name);
         SaveManager.save(s);
-        return { gold: reward.gold + (kitchen?.bonusGold ?? 0) + (specialOrder?.gold ?? 0), intimacy: gain, favorite, stories, kitchen, specialOrder };
+        return { gold: reward.gold + (kitchen?.bonusGold ?? 0) + (specialOrder?.gold ?? 0), intimacy: gain, favorite, stories, kitchen, specialOrder, rainReaction };
     }
 }
