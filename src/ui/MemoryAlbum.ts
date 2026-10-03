@@ -1,3 +1,4 @@
+import { festivalFinale, festivalEvent } from '../data/festival';
 import { customers } from '../data/customers';
 import { dialogues } from '../data/dialogues';
 import { dongguLetters } from '../data/dongguLetters';
@@ -8,13 +9,15 @@ import { modal, on, closeModal } from './UI';
 interface Memory { id: string; name: string; title: string; summary: string; lines: { speaker: string; text: string }[] }
 export class MemoryAlbum {
     static memories(s: SaveData): Memory[] {
-        return customers.flatMap(c => {
+        const memories = customers.flatMap(c => {
             const p = s.customers[c.id]; if (!p?.unlocked) return [];
             const events = CharacterStoryManager.events(c.id);
             const stories: Memory[] = events.length ? events.slice(0, p.characterStory?.stage ?? 0).map(e => ({ id: c.id, name: c.name, title: e.title, summary: e.summary, lines: [...e.before, ...e.after].map(l => ({ speaker: l.speaker === 'guest' ? c.name : '주인공', text: l.text })) })) : (dialogues[c.id]?.stories ?? []).slice(0, p.storyStage).map((lines, i) => ({ id: c.id, name: c.name, title: '작은 이야기 ' + (i + 1), summary: lines[0], lines: lines.map(text => ({ speaker: c.name, text })) }));
             if (c.id === 'donggu') stories.push(...dongguLetters.slice(0, s.dongguLetters?.stage ?? 0).map(e => ({ id: c.id, name: c.name, title: e.title, summary: e.summary, lines: e.after.map(l => ({ speaker: l.speaker === 'guest' ? c.name : '주인공', text: l.text })) })));
             return stories;
         });
+        if(s.festival?.stage==='complete')memories.push({id:'nabi',name:'골목 친구들',title:festivalFinale.title,summary:festivalFinale.summary,lines:festivalEvent(s.festival.invited).after.map(l=>({speaker:l.speaker==='chef'?'주인공':'골목 친구들',text:l.text}))});
+        return memories;
     }
     static open(s: SaveData) {
         const memories = this.memories(s);

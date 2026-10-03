@@ -6,6 +6,7 @@ import { CookingManager } from './CookingManager';
 import { DialogueManager } from './DialogueManager';
 import { SaveManager } from './SaveManager';
 import { customerById } from '../data/customers';
+import { FestivalManager } from './FestivalManager';
 import { RainNightManager } from './RainNightManager';
 import { SpecialOrderManager } from './SpecialOrderManager';
 import { KitchenManager } from './KitchenManager';
@@ -14,6 +15,7 @@ export class ProgressionManager {
         const c = customerById(id), p = s.customers[id], r = s.activeNight!.report;
         const reward = CookingManager.reward(q);
         const kitchen = meal ? KitchenManager.record(s, meal.recipeId, meal.score, q, r.served) : undefined;
+        FestivalManager.record(s,id,meal);
         const rainReaction = meal ? RainNightManager.finish(s,id,meal.recipeId) : undefined;
         s.recentCustomers = [...(s.recentCustomers ?? []), id].slice(-3);
         if (c.role === 'ambient') {
