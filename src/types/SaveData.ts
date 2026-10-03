@@ -24,6 +24,7 @@ export interface SaveData {
     pendingRecipeUnlocks: string[];
     upgrades: Record<string, number>;
     recipeMastery?: Record<string, RecipeMastery>;
+    specialOrderHistory?: Record<string, import('../systems/SpecialOrderManager').SpecialOrderHistory>;
     settings: {
         sound: boolean;
     };
@@ -32,6 +33,7 @@ export interface SaveData {
     recentAlleyEventIds?: string[];
     activeNight: {
         kitchen?: KitchenNight;
+        specialOrders?: Record<string, import('../systems/SpecialOrderManager').SpecialOrder | null>;
         alley?: AlleyNightState;
         condition?: NightConditionId;
         pairStarts?: number[];

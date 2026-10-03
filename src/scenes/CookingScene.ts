@@ -44,7 +44,7 @@ export class CookingScene {
         });
     }
     private extras() {
-        panel(`<div class="eyebrow">한 숟갈의 다정함</div><h2>조금 더 챙겨 줄까요?</h2><p class="muted">친구의 취향을 알고 있다면 기억해 주세요.</p><div class="extra-list">${this.recipe.extraIngredientIds.map(id => `<button id="extra-${id}" class="secondary">${ingredients[id].name}${id === 'warm' ? '' : ' 넉넉하게'}</button>`).join('')}</div><button id="no-extra" class="plain">기본으로 만들기 →</button>`);
+        panel(`<div class="eyebrow">한 숟갈의 다정함</div><h2>조금 더 챙겨 줄까요?</h2><p class="muted">${this.customer?.specialExtra ? `특별 주문 · ${ingredients[this.customer.specialExtra].name}을 추가하고 요리 점수 75점 이상에 도전해요.` : '친구의 취향을 알고 있다면 기억해 주세요.'}</p><div class="extra-list">${this.recipe.extraIngredientIds.map(id => `<button id="extra-${id}" class="secondary">${ingredients[id].name}${id === 'warm' ? '' : ' 넉넉하게'}${this.customer?.specialExtra === id ? ' · 특별 주문' : ''}</button>`).join('')}</div><button id="no-extra" class="plain">기본으로 만들기 →</button>`);
         for (const id of this.recipe.extraIngredientIds)
             on('extra-' + id, () => { this.extra = id; this.action(); });
         on('no-extra', () => this.action());

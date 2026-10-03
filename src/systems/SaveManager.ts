@@ -8,6 +8,7 @@ import { customers } from '../data/customers';
 import { recipes } from '../data/recipes';
 import { WeatherManager } from './WeatherManager';
 import { RecipeManager } from './RecipeManager';
+import { SpecialOrderManager } from './SpecialOrderManager';
 import { LetterManager } from './LetterManager';
 import { KitchenManager } from './KitchenManager';
 export const SAVE_KEY = 'alley-cat-diner-v1';
@@ -33,6 +34,7 @@ export class SaveManager {
                     base.customers[c.id] = { intimacy: v.intimacy, visitCount: v.visitCount, storyStage: Math.min(3, Math.max(0, Math.floor(v.storyStage || 0))), unlocked: !!v.unlocked, preferenceFound: !!v.preferenceFound, characterStory: CharacterStoryManager.restore(c.id, v.characterStory, v.visitCount) };
             }
             base.dongguLetters = LetterManager.restore(s.dongguLetters);
+            base.specialOrderHistory = SpecialOrderManager.restoreHistory(s.specialOrderHistory);
             base.gold = s.gold;
             base.recipeMastery = KitchenManager.restoreMastery(s.recipeMastery);
             base.night = s.night;
@@ -56,7 +58,10 @@ export class SaveManager {
                     };
             }
             RecipeManager.discover(base);
-            if (base.activeNight) base.activeNight.kitchen = KitchenManager.restoreNight(base, s.activeNight.kitchen);
+            if (base.activeNight) {
+                base.activeNight.kitchen = KitchenManager.restoreNight(base, s.activeNight.kitchen);
+                base.activeNight.specialOrders = SpecialOrderManager.restoreNight(base, s.activeNight.specialOrders);
+            }
             return base;
         }
         catch {

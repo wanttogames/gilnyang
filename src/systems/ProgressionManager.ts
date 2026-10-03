@@ -6,6 +6,7 @@ import { CookingManager } from './CookingManager';
 import { DialogueManager } from './DialogueManager';
 import { SaveManager } from './SaveManager';
 import { customerById } from '../data/customers';
+import { SpecialOrderManager } from './SpecialOrderManager';
 import { KitchenManager } from './KitchenManager';
 export class ProgressionManager {
     static serve(s: SaveData, id: string, q: Quality, extra: string, meal?: { recipeId: string; score: number }) {
@@ -19,8 +20,9 @@ export class ProgressionManager {
             SaveManager.save(s);
             return { gold: reward.gold + (kitchen?.bonusGold ?? 0), intimacy: 0, favorite: false, stories: [] as string[], kitchen };
         }
+        const specialOrder = SpecialOrderManager.resolve(s, id, meal, extra);
         const favorite = p.preferenceFound && extra === c.favoriteIngredients[0];
-        const gain = reward.intimacy + (favorite ? 2 : 0) + (s.upgrades.chair ? 1 : 0);
+        const gain = reward.intimacy + (favorite ? 2 : 0) + (s.upgrades.chair ? 1 : 0) + (specialOrder?.intimacy ?? 0);
         p.unlocked = true;
         p.visitCount++;
         p.intimacy += gain;
@@ -37,6 +39,6 @@ export class ProgressionManager {
         for (const recipeId of newRecipes)
             r.discoveries.push('새 레시피 · ' + recipeById(recipeId).name);
         SaveManager.save(s);
-        return { gold: reward.gold + (kitchen?.bonusGold ?? 0), intimacy: gain, favorite, stories, kitchen };
+        return { gold: reward.gold + (kitchen?.bonusGold ?? 0) + (specialOrder?.gold ?? 0), intimacy: gain, favorite, stories, kitchen, specialOrder };
     }
 }

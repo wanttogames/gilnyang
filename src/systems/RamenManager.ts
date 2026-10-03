@@ -1,7 +1,7 @@
 import { CookingManager } from './CookingManager';
 import type { CookingResult, CookingStepScore } from '../types/Cooking';
 
-export interface RamenCustomer { id: string; name: string; twoEggs?: boolean }
+export interface RamenCustomer { id: string; name: string; twoEggs?: boolean; specialExtra?: string }
 export interface RamenOrder { customerName: string; brothCenter: number; noodleCenter: number; texture: string; eggs: number }
 export interface RamenResult extends CookingResult { steps: CookingStepScore[]; eggs: number }
 

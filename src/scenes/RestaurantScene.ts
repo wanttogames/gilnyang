@@ -17,6 +17,8 @@ import { NabiView } from '../game/NabiView';
 import { customerById } from '../data/customers';
 import { ambientById } from '../data/ambientCustomers';
 import { CharacterStoryManager } from '../systems/CharacterStoryManager';
+import { SpecialOrderManager } from '../systems/SpecialOrderManager';
+import { SpecialOrderNotes } from '../ui/SpecialOrderNotes';
 import { LetterManager } from '../systems/LetterManager';
 import { MemoryAlbum } from '../ui/MemoryAlbum';
 import { StoryDialogue } from '../ui/StoryDialogue';
@@ -408,11 +410,13 @@ export class RestaurantScene extends Phaser.Scene {
         const spawn = (id: string, seatIndex: number) => {
             const c = customerById(id), p = this.progress(id);
             if (ids.length === 1) CharacterStoryManager.reserve(id,p,this.save.night,this.save);
+            const special = SpecialOrderManager.reserve(this.save, id);
+            SaveManager.save(this.save);
             const seat = {x:seatIndex === 0 ? 246 : 526,y:733};
             const guest = this.createGuest(id,CustomerVisit.entrance.x,CustomerVisit.entrance.y);
             let slot: ActiveCustomer;
             const visit = new CustomerVisit(this,guest,!!c.dog,() => ['waiting','ordering','cooking','reacting'].includes(slot.state),seat);
-            slot = {customer:c,guest,visit,seat,state:'entering',recipe:RecipeManager.order(c,this.save)};
+            slot = {customer:c,guest,visit,seat,state:'entering',recipe:special ? recipeById(special.recipeId) : RecipeManager.order(c,this.save)};
             this.activeGuests.push(slot);
             visit.enter(() => {slot.state='seating';}, () => {
                 slot.state='waiting';
@@ -432,7 +436,7 @@ export class RestaurantScene extends Phaser.Scene {
     }
     private chooseOrder() {
         this.phase = 'order'; this.lockGuestInput(false);
-        panel(`<div class="eyebrow">두 자리의 따뜻한 한 끼</div><h2>누구부터 준비할까요?</h2><div class="pair-orders">${this.activeGuests.map((slot,i) => `<div class="pair-order"><div><strong>${slot.customer.name} · ${slot.recipe.name}</strong><p>${DialogueManager.order(slot.customer.id,this.save.weather,slot.recipe,this.progress(slot.customer.id),this.save.activeNight?.condition)}</p></div><button id="cook-order-${i}" class="primary">요리</button></div>`).join('')}</div>`);
+        panel(`<div class="eyebrow">두 자리의 따뜻한 한 끼</div><h2>누구부터 준비할까요?</h2><div class="pair-orders">${this.activeGuests.map((slot,i) => `<div class="pair-order"><div><strong>${slot.customer.name} · ${slot.recipe.name}</strong><p>${SpecialOrderManager.detail(this.save,slot.customer.id)?.quote ?? DialogueManager.order(slot.customer.id,this.save.weather,slot.recipe,this.progress(slot.customer.id),this.save.activeNight?.condition)}</p>${SpecialOrderNotes.card(this.save,slot.customer.id)}</div><button id="cook-order-${i}" class="primary">요리</button></div>`).join('')}</div>`);
         this.activeGuests.forEach((slot,i) => on('cook-order-'+i,() => {
             if (this.phase !== 'order' || slot.state !== 'waiting') return;
             // The persisted queue follows actual serving order, including a refresh in the mini-game.
@@ -450,9 +454,9 @@ export class RestaurantScene extends Phaser.Scene {
         this.cookingResult = undefined;
         const customer = this.current!;
         const twoEggs = CharacterStoryManager.pendingEvent(customer.id, this.progress(customer.id))?.serving === 'two-eggs';
-        new CookingScene(this.currentRecipe!,!!this.save.upgrades.pot,(quality,extra,result) => { this.cookingResult = result; this.ready(quality,extra); }, { id: customer.id, name: customer.name, twoEggs }, KitchenManager.style(this.save, this.currentRecipe!.id));
+        new CookingScene(this.currentRecipe!,!!this.save.upgrades.pot,(quality,extra,result) => { this.cookingResult = result; this.ready(quality,extra); }, { id: customer.id, name: customer.name, twoEggs, specialExtra: SpecialOrderManager.current(this.save, customer.id)?.extra }, KitchenManager.style(this.save, this.currentRecipe!.id));
     }
-    order() { if (!['waiting', 'character-story'].includes(this.phase)) return; if (this.activeGuests.length === 2) { this.chooseOrder(); return; } this.phase = 'order'; this.guestVisit?.wait(); this.lockGuestInput(false); const c = this.current!, r = this.currentRecipe = this.activeGuests[0]?.recipe ?? RecipeManager.order(c, this.save), p = this.progress(c.id); panel(`<div class="eyebrow">${this.save.activeNight!.report.served + 1} / ${this.save.activeNight!.queue.length} · 손님이 기다려요</div><div class="order-row"><div><h2>${c.name} <small>${c.species}</small></h2><p class="quote">“${DialogueManager.order(c.id, this.save.weather, r, p,this.save.activeNight?.condition)}”</p></div>${food(r.id)}</div><div class="order-bottom"><div><small>오늘의 주문</small><strong>${r.name}</strong></div><button class="primary" id="cook">요리 시작 ${icon('arrow')}</button></div>${p.characterStory?.pending?.eventId === 'KKAMANG_STORY_4' ? '<p class="preference">오늘만 · 계란 두 개를 부탁했어요</p>' : ''}${p.preferenceFound ? `<p class="preference">기억해 주세요 · ${ingredients[c.favoriteIngredients[0]].name}${c.favoriteIngredients[0] === 'warm' ? '' : ' 넉넉하게'}</p>` : ''}`); on('cook', () => this.beginCooking()); }
+    order() { if (!['waiting', 'character-story'].includes(this.phase)) return; if (this.activeGuests.length === 2) { this.chooseOrder(); return; } this.phase = 'order'; this.guestVisit?.wait(); this.lockGuestInput(false); const c = this.current!, r = this.currentRecipe = this.activeGuests[0]?.recipe ?? RecipeManager.order(c, this.save), p = this.progress(c.id); panel(`<div class="eyebrow">${this.save.activeNight!.report.served + 1} / ${this.save.activeNight!.queue.length} · 손님이 기다려요</div><div class="order-row"><div><h2>${c.name} <small>${c.species}</small></h2><p class="quote">“${SpecialOrderManager.detail(this.save,c.id)?.quote ?? DialogueManager.order(c.id, this.save.weather, r, p,this.save.activeNight?.condition)}”</p></div>${food(r.id)}</div><div class="order-bottom"><div><small>오늘의 주문</small><strong>${r.name}</strong></div><button class="primary" id="cook">요리 시작 ${icon('arrow')}</button></div>${SpecialOrderNotes.card(this.save,c.id)}${p.characterStory?.pending?.eventId === 'KKAMANG_STORY_4' ? '<p class="preference">오늘만 · 계란 두 개를 부탁했어요</p>' : ''}${p.preferenceFound && !SpecialOrderManager.current(this.save,c.id) ? `<p class="preference">기억해 주세요 · ${ingredients[c.favoriteIngredients[0]].name}${c.favoriteIngredients[0] === 'warm' ? '' : ' 넉넉하게'}</p>` : ''}`); on('cook', () => this.beginCooking()); }
     ready(q: Quality, extra: string) { if (this.phase === 'alley-event') return; this.phase = 'ready'; audio.success(); this.tweens.add({ targets: this.chef, angle: 5, duration: 140, yoyo: true, repeat: 3 }); panel(`<div class="eyebrow">정성을 담은 한 접시</div><div class="ready-row">${KitchenNotes.food(this.save, this.currentRecipe!.id)}<div><span class="quality q-${q === '완벽' ? 'perfect' : 'good'}">${q === '완벽' ? 'PERFECT · ' : ''}${q}</span><h2>${this.currentRecipe!.name}</h2><p class="muted">${extra ? ingredients[extra].name + '도 마음을 담아' : '따뜻할 때 전해 주세요.'}</p></div></div><button id="serve" class="primary">${this.current!.name}에게 음식 건네기 →</button>`); on('serve', () => this.serve(q, extra)); }
     private get guestInputLocked() { return ['arriving', 'seating', 'waiting', 'eating', 'standing', 'farewell', 'leaving', 'gap', 'transition', 'alley-event'].includes(this.phase); }
     private lockGuestInput(locked: boolean) {
@@ -486,10 +490,11 @@ export class RestaurantScene extends Phaser.Scene {
             this.guest.affinity(reward.intimacy, p.intimacy, p.characterStory?.stage ?? 0);
         }
         const mastery = reward.kitchen;
+        const specialText = reward.specialOrder ? `<div class="special-order-result">${reward.specialOrder.success ? '특별 주문 성공! +12 G · 친밀도 +3' : '특별 주문은 다음에 다시 도전해요. 기본 식사 보상은 그대로 받아요.'}<p>“${reward.specialOrder.reaction}”</p></div>` : '';
         const masteryText = mastery ? `<div class="mastery-reward ${mastery.newBest ? 'mastery-new-best' : ''}">${recipeById(this.currentRecipe!.id).name} 숙련도 +${mastery.xp} XP${mastery.newBest ? ` · 최고 기록 ${this.cookingResult?.score ?? 0}점!` : ''}${mastery.rankUp ? ' · 등급 상승!' : ''}${mastery.dishUnlocked ? ' · 새 그릇 해금!' : ''}${mastery.toolsUnlocked ? ' · 조리도구 해금!' : ''}${mastery.goalCompleted ? ' · 오늘의 목표 달성 +20 G' : ''}${mastery.bonusGold && !mastery.goalCompleted ? ' · 특별 메뉴 +5 G' : ''}</div>` : '';
         const reaction = this.cookingResult ? `${this.cookingResult.reaction} ${DialogueManager.reaction(c.id, this.save.weather, reward.favorite)}` : DialogueManager.reaction(c.id, this.save.weather, reward.favorite);
-        panel(`<div class="eyebrow">잘 먹었습니다</div><h2>${c.name}의 작은 인사</h2><p class="quote">“${reaction}”</p><div class="rewards"><span>${icon('coin')} +${reward.gold} G</span>${c.role === 'ambient' ? '' : `<span>${icon('heart')} 친밀도 +${reward.intimacy}${reward.favorite ? ' · 취향 보너스' : ''}</span>`}</div>${masteryText}<button id="next" class="primary">${reward.stories.length || this.progress(c.id).characterStory?.pending?.part === 'after' || (c.id === 'donggu' && LetterManager.pending(this.save)) ? '이야기 들어 주기' : this.activeGuests.length > 1 ? '남은 손님의 한 끼 준비하기' : this.save.activeNight!.report.served === this.save.activeNight!.queue.length ? '오늘 밤 마무리' : '다음 손님 맞이하기'} →</button>`);
-        if (this.cookingResult || mastery) $('panel').classList.add('meal-reaction-panel');
+        panel(`<div class="eyebrow">잘 먹었습니다</div><h2>${c.name}의 작은 인사</h2><p class="quote">“${reaction}”</p><div class="rewards"><span>${icon('coin')} +${reward.gold} G</span>${c.role === 'ambient' ? '' : `<span>${icon('heart')} 친밀도 +${reward.intimacy}${reward.favorite ? ' · 취향 보너스' : ''}</span>`}</div>${masteryText}${specialText}<button id="next" class="primary">${reward.stories.length || this.progress(c.id).characterStory?.pending?.part === 'after' || (c.id === 'donggu' && LetterManager.pending(this.save)) ? '이야기 들어 주기' : this.activeGuests.length > 1 ? '남은 손님의 한 끼 준비하기' : this.save.activeNight!.report.served === this.save.activeNight!.queue.length ? '오늘 밤 마무리' : '다음 손님 맞이하기'} →</button>`);
+        if (this.cookingResult || mastery || reward.specialOrder) $('panel').classList.add('meal-reaction-panel');
         on('next', () => {
             if (this.phase !== 'reaction') return;
             $('panel').classList.remove('meal-reaction-panel');
