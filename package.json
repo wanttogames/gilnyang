@@ -1,7 +1,7 @@
 {
   "name": "gilnyang",
   "private": true,
-  "version": "0.5.0",
+  "version": "0.5.1",
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
@@ -14,7 +14,8 @@
     "test:oden": "node tests/oden-cooking.cjs",
     "test:ramen": "node tests/ramen-cooking.cjs",
     "test:bread": "node tests/bread-cooking.cjs",
-    "test:kitchen": "node tests/kitchen-progression.cjs && node tests/kitchen-score-flow.cjs"
+    "test:kitchen": "node tests/kitchen-progression.cjs && node tests/kitchen-score-flow.cjs",
+    "test:letters": "node tests/donggu-letters.cjs"
   },
   "dependencies": {
     "phaser": "^3.90.0"

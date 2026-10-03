@@ -16,7 +16,7 @@ export class StoryDialogue {
         if (!line) { this.close(); return; }
         this.expression(line);
         this.waiting = !!line.pause;
-        panel(`<div id="character-story" data-event="${this.event.id}" data-part="${this.part}" data-line="${index}"><div class="eyebrow">${this.guestName}의 이야기 · ${this.part === 'before' ? '주문 전' : '한 끼를 먹고'}</div><h2>${this.event.title}</h2><div class="story-speaker">${line.speaker === 'guest' ? this.guestName : '주인공'}</div><p id="story-text" class="quote" aria-live="polite">${this.waiting ? '…' : line.text}</p><button id="character-story-next" class="primary">${this.waiting ? '잠깐의 정적 · 탭하면 바로 듣기' : this.buttonLabel()}</button></div>`);
+        panel(`<div id="character-story" data-event="${this.event.id}" data-part="${this.part}" data-line="${index}">${this.event.id.startsWith('DONGGU_LETTER_') ? '<div class="letter-envelope" aria-hidden="true"><span>동구에게</span></div>' : ''}<div class="eyebrow">${this.guestName}의 이야기 · ${this.part === 'before' ? '주문 전' : '한 끼를 먹고'}</div><h2>${this.event.title}</h2><div class="story-speaker">${line.speaker === 'guest' ? this.guestName : '주인공'}</div><p id="story-text" class="quote" aria-live="polite">${this.waiting ? '…' : line.text}</p><button id="character-story-next" class="primary">${this.waiting ? '잠깐의 정적 · 탭하면 바로 듣기' : this.buttonLabel()}</button></div>`);
         if (this.waiting) this.delay = window.setTimeout(() => this.reveal(line), line.pause);
         on('character-story-next', () => {
             if (this.closed) return;

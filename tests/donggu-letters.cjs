@@ -1,0 +1,18 @@
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),ts=require('typescript');
+const cache=new Map(),handlers=new Map();let html='',stored;
+const ui={modal:s=>{html=s;handlers.clear()},on:(id,fn)=>handlers.set(id,fn),closeModal:()=>{html=''}};
+function load(relative){const file=path.resolve(relative);if(file.endsWith('/ui/UI.ts'))return ui;if(cache.has(file))return cache.get(file).exports;const m={exports:{}};cache.set(file,m);new Function('require','module','exports',ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText)(id=>load(path.resolve(path.dirname(file),id)+'.ts'),m,m.exports);return m.exports;}
+global.localStorage={getItem:()=>stored,setItem:(_k,v)=>stored=v};global.document={querySelector:()=>null};
+const {newSave,SaveManager:S,emptyReport}=load('src/systems/SaveManager.ts'),{LetterManager:L}=load('src/systems/LetterManager.ts'),{MemoryAlbum:A}=load('src/ui/MemoryAlbum.ts'),{CharacterStoryManager:C}=load('src/systems/CharacterStoryManager.ts');
+let s=newSave();s.activeNight={queue:['donggu'],report:emptyReport()};let p=s.customers.donggu;
+assert.equal(L.reserve(s),undefined);p.unlocked=true;p.visitCount=2;p.intimacy=99;assert.equal(L.reserve(s),undefined);p.visitCount=3;p.intimacy=3;assert.equal(L.reserve(s),undefined);p.intimacy=4;
+const event=L.reserve(s);assert.equal(event.id,'DONGGU_LETTER_1');assert.equal(A.memories(s).length,0,'unfinished letter hidden');assert.equal(L.reserve(s),event);
+C.reserve('donggu',p,s.night,s);const original=JSON.stringify(p.characterStory);L.advance(s);L.advance(s);S.save(s);s=S.load();p=s.customers.donggu;assert.equal(s.dongguLetters.line,2);assert.equal(JSON.stringify(p.characterStory),original,'separate original arc retained');
+while(L.pending(s))L.advance(s);assert.equal(s.dongguLetters.stage,1);assert.equal(s.activeNight.report.discoveries.length,1);assert.equal(L.advance(s),false);assert.equal(A.memories(s).length,1);
+p.visitCount=100;p.intimacy=100;assert.equal(L.reserve(s),undefined,'one letter per night');s.night=2;p.visitCount=5;assert.equal(L.reserve(s),undefined);p.visitCount=6;p.intimacy=9;assert.equal(L.reserve(s),undefined);p.intimacy=10;assert.equal(L.reserve(s).id,'DONGGU_LETTER_2');while(L.pending(s))L.advance(s);assert.equal(L.reserve(s),undefined);assert.equal(A.memories(s).length,2);
+p.characterStory={stage:2,lastEventNight:1,lastEventVisit:3};s.customers.kong.unlocked=true;s.customers.kong.storyStage=1;assert.equal(A.memories(s).length,5,'existing completed arcs and legacy stories collected');
+const before=JSON.stringify(s);A.open(s);assert(html.includes('추억 앨범'));handlers.get('memory-'+A.memories(s).findIndex(m=>m.title==='멀리서 온 누나의 편지'))();assert(html.includes('누나'));handlers.get('album-back')();assert.equal(JSON.stringify(s),before,'replay never mutates progress or rewards');handlers.get('album-close')();assert.equal(html,'');
+S.save(s);s=S.load();assert.equal(s.dongguLetters.stage,2);assert.equal(A.memories(s).length,5);assert.deepEqual(L.restore({stage:-2,line:99,lastVisit:NaN,lastNight:'bad'}),{stage:0,lastVisit:0,lastNight:0});assert.deepEqual(L.restore({stage:999,line:0}),{stage:2,lastVisit:0,lastNight:0});
+for(const version of [1,2]){const old=newSave();old.version=version;old.gold=123;delete old.dongguLetters;stored=JSON.stringify(old);const restored=S.load();assert.equal(restored.gold,123);assert.equal(restored.dongguLetters.stage,0)}
+A.open(newSave());assert(html.includes('아직 빈 앨범'));
+console.log('PASS letters: visit/affinity gates, independent story arc, persisted cursor, one per night, no repeat, legacy saves; album completion-only collection and read-only replay');

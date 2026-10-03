@@ -8,6 +8,7 @@ import { customers } from '../data/customers';
 import { recipes } from '../data/recipes';
 import { WeatherManager } from './WeatherManager';
 import { RecipeManager } from './RecipeManager';
+import { LetterManager } from './LetterManager';
 import { KitchenManager } from './KitchenManager';
 export const SAVE_KEY = 'alley-cat-diner-v1';
 export const emptyReport = (): NightReport => ({ served: 0, gold: 0, perfect: 0, intimacy: {}, discoveries: [] });
@@ -31,6 +32,7 @@ export class SaveManager {
                 if (v && Number.isFinite(v.intimacy) && v.intimacy >= 0 && Number.isInteger(v.visitCount) && v.visitCount >= 0)
                     base.customers[c.id] = { intimacy: v.intimacy, visitCount: v.visitCount, storyStage: Math.min(3, Math.max(0, Math.floor(v.storyStage || 0))), unlocked: !!v.unlocked, preferenceFound: !!v.preferenceFound, characterStory: CharacterStoryManager.restore(c.id, v.characterStory, v.visitCount) };
             }
+            base.dongguLetters = LetterManager.restore(s.dongguLetters);
             base.gold = s.gold;
             base.recipeMastery = KitchenManager.restoreMastery(s.recipeMastery);
             base.night = s.night;

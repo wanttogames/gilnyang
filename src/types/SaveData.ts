@@ -17,6 +17,7 @@ export interface SaveData {
     night: number;
     /** Set after the new-player opening sequence; absent in older saves. */
     prologueSeen?: boolean;
+    dongguLetters?: import('../systems/LetterManager').LetterProgress;
     weather: Weather;
     customers: Record<string, CustomerProgress>;
     unlockedRecipes: string[];

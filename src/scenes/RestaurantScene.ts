@@ -17,6 +17,8 @@ import { NabiView } from '../game/NabiView';
 import { customerById } from '../data/customers';
 import { ambientById } from '../data/ambientCustomers';
 import { CharacterStoryManager } from '../systems/CharacterStoryManager';
+import { LetterManager } from '../systems/LetterManager';
+import { MemoryAlbum } from '../ui/MemoryAlbum';
 import { StoryDialogue } from '../ui/StoryDialogue';
 import type { StoryPart, StoryLine } from '../types/CharacterStory';
 import { WeatherView } from '../game/WeatherView';
@@ -336,7 +338,7 @@ export class RestaurantScene extends Phaser.Scene {
             window.location.reload();
         });
     }
-    nav() { $('nav').innerHTML = `<button id="menu-nav">${icon('menu')}<span>메뉴</span></button><button id="guests-nav">${icon('heart')}<span>손님</span></button><button id="shop-nav">${icon('shop')}<span>가게</span></button><button id="book-nav">${icon('book')}<span>도감</span></button>`; on('menu-nav', () => { if (!this.guestInputLocked) this.menu(); }); on('guests-nav', () => { if (!this.guestInputLocked) CustomerBookScene.open(this.save); }); on('book-nav', () => { if (!this.guestInputLocked) CustomerBookScene.open(this.save); }); on('shop-nav', () => { if (!this.guestInputLocked) this.shop(); }); }
+    nav() { $('nav').innerHTML = `<button id="menu-nav">${icon('menu')}<span>메뉴</span></button><button id="guests-nav">${icon('heart')}<span>손님</span></button><button id="shop-nav">${icon('shop')}<span>가게</span></button><button id="book-nav">${icon('book')}<span>앨범</span></button>`; on('menu-nav', () => { if (!this.guestInputLocked) this.menu(); }); on('guests-nav', () => { if (!this.guestInputLocked) CustomerBookScene.open(this.save); }); on('book-nav', () => { if (!this.guestInputLocked) MemoryAlbum.open(this.save); }); on('shop-nav', () => { if (!this.guestInputLocked) this.shop(); }); }
     welcome() { $('panel').classList.remove('kitchen-intro-panel', 'night-summary-panel'); this.kitchenStatus(); this.phase = 'closed'; $('caption').textContent = weatherDefinitions[this.save.weather].caption; panel(`<div class="eyebrow">A LITTLE RESTAURANT, A WARM NIGHT</div><h1>길냥이 식당</h1><p class="muted">${weatherDefinitions[this.save.weather].greeting}</p><button class="primary" id="start">${this.save.night === 1 ? '첫 밤의 문 열기' : '오늘 밤 영업 시작'} <span>→</span></button><div class="panel-foot">${icon('save')} 자동 저장 · 느긋하게 즐겨도 괜찮아요</div>`); on('start', () => { if (this.phase !== 'closed') return; audio.unlock(); audio.note(392, .25); const condition = rollNightCondition(this.save.weather);
             const queue = CustomerManager.queue(this.save, Math.random, condition);
             this.save.activeNight = { queue, report: emptyReport(), condition, pairStarts: CustomerManager.pairs(this.save, queue) };
@@ -366,6 +368,12 @@ export class RestaurantScene extends Phaser.Scene {
             if (this.guest instanceof NabiView) this.guest.settle(previous.intimacy, previous.characterStory?.stage ?? 0);
             this.playCharacterStory('after', () => this.depart());
             return;
+        }
+        if (previousId === 'donggu' && LetterManager.pending(this.save)) {
+            this.current = customerById('donggu');
+            this.guest = this.createGuest('donggu', CustomerVisit.seat.x, CustomerVisit.seat.y);
+            this.guestVisit = this.createVisit(); this.guestVisit.restoreSeat();
+            this.playDongguLetter(); return;
         }
         const alley = AlleyEventManager.pending(this.save);
         if (alley && !Object.values(this.save.customers).some(p=>p.characterStory?.pending)) { this.startAlleyEvent(alley); return; }
@@ -469,6 +477,7 @@ export class RestaurantScene extends Phaser.Scene {
         this.guestVisit?.wait();
         this.lockGuestInput(false);
         const c = this.current!, reward = ProgressionManager.serve(this.save, c.id, q, extra, { recipeId: this.currentRecipe!.id, score: this.cookingResult?.score ?? (q === '완벽' ? 100 : q === '맛있음' ? 75 : 40) });
+        if (c.id === 'donggu') { LetterManager.reserve(this.save); SaveManager.save(this.save); }
         this.hud();
         audio.success();
         $('caption').textContent = '배부른 한 끼가, 다정한 기억이 됩니다.';
@@ -479,7 +488,7 @@ export class RestaurantScene extends Phaser.Scene {
         const mastery = reward.kitchen;
         const masteryText = mastery ? `<div class="mastery-reward ${mastery.newBest ? 'mastery-new-best' : ''}">${recipeById(this.currentRecipe!.id).name} 숙련도 +${mastery.xp} XP${mastery.newBest ? ` · 최고 기록 ${this.cookingResult?.score ?? 0}점!` : ''}${mastery.rankUp ? ' · 등급 상승!' : ''}${mastery.dishUnlocked ? ' · 새 그릇 해금!' : ''}${mastery.toolsUnlocked ? ' · 조리도구 해금!' : ''}${mastery.goalCompleted ? ' · 오늘의 목표 달성 +20 G' : ''}${mastery.bonusGold && !mastery.goalCompleted ? ' · 특별 메뉴 +5 G' : ''}</div>` : '';
         const reaction = this.cookingResult ? `${this.cookingResult.reaction} ${DialogueManager.reaction(c.id, this.save.weather, reward.favorite)}` : DialogueManager.reaction(c.id, this.save.weather, reward.favorite);
-        panel(`<div class="eyebrow">잘 먹었습니다</div><h2>${c.name}의 작은 인사</h2><p class="quote">“${reaction}”</p><div class="rewards"><span>${icon('coin')} +${reward.gold} G</span>${c.role === 'ambient' ? '' : `<span>${icon('heart')} 친밀도 +${reward.intimacy}${reward.favorite ? ' · 취향 보너스' : ''}</span>`}</div>${masteryText}<button id="next" class="primary">${reward.stories.length || this.progress(c.id).characterStory?.pending?.part === 'after' ? '이야기 들어 주기' : this.activeGuests.length > 1 ? '남은 손님의 한 끼 준비하기' : this.save.activeNight!.report.served === this.save.activeNight!.queue.length ? '오늘 밤 마무리' : '다음 손님 맞이하기'} →</button>`);
+        panel(`<div class="eyebrow">잘 먹었습니다</div><h2>${c.name}의 작은 인사</h2><p class="quote">“${reaction}”</p><div class="rewards"><span>${icon('coin')} +${reward.gold} G</span>${c.role === 'ambient' ? '' : `<span>${icon('heart')} 친밀도 +${reward.intimacy}${reward.favorite ? ' · 취향 보너스' : ''}</span>`}</div>${masteryText}<button id="next" class="primary">${reward.stories.length || this.progress(c.id).characterStory?.pending?.part === 'after' || (c.id === 'donggu' && LetterManager.pending(this.save)) ? '이야기 들어 주기' : this.activeGuests.length > 1 ? '남은 손님의 한 끼 준비하기' : this.save.activeNight!.report.served === this.save.activeNight!.queue.length ? '오늘 밤 마무리' : '다음 손님 맞이하기'} →</button>`);
         if (this.cookingResult || mastery) $('panel').classList.add('meal-reaction-panel');
         on('next', () => {
             if (this.phase !== 'reaction') return;
@@ -521,6 +530,20 @@ export class RestaurantScene extends Phaser.Scene {
                 this.tweens.getTweensOf(this.guest).forEach(tween => tween.resume());
             }
             next();
+        });
+    }
+    private playDongguLetter() {
+        const event = LetterManager.pending(this.save);
+        if (!event) { this.depart(); return; }
+        this.phase = 'character-story'; this.lockGuestInput(true); this.guestVisit?.pauseWaiting();
+        this.tweens.getTweensOf(this.guest!).forEach(t => t.pause());
+        $('caption').textContent = '멀리 있는 누나에게, 따뜻한 마음을 전해요.';
+        new StoryDialogue(event, 'after', () => this.save.dongguLetters!.line!, () => {
+            const done = LetterManager.advance(this.save); SaveManager.save(this.save); return done;
+        }, '동구', line => this.storyExpression(line), () => {
+            if (this.guest instanceof DongguView) this.guest.setTexture('donggu').setAngle(0).setScale(customerRender.scale).setY(CustomerVisit.seat.y);
+            this.tweens.getTweensOf(this.guest!).forEach(t => t.resume());
+            toast('추억 앨범에 동구의 편지를 보관했어요.'); this.depart();
         });
     }
     private storyExpression(line: StoryLine) {
@@ -569,6 +592,7 @@ export class RestaurantScene extends Phaser.Scene {
         if (!this.guest?.active || ['standing', 'farewell', 'leaving', 'gap'].includes(this.phase)) return;
         const guest = this.guest, visit = this.guestVisit!, p = this.progress(this.current!.id);
         if (p.characterStory?.pending) return;
+        if (this.current!.id === 'donggu' && LetterManager.reserve(this.save)) { SaveManager.save(this.save); this.playDongguLetter(); return; }
         const complete = CharacterStoryManager.complete(this.current!.id, p);
         this.lockGuestInput(true); this.setCustomerState('leaving');
         panel('<div class="eyebrow">또 만나요</div><h2>다음 밤에도 기다릴게요.</h2><p class="muted">골목에 따뜻한 기억 하나가 남았어요.</p>');
