@@ -17,6 +17,8 @@ import { NabiView } from '../game/NabiView';
 import { customerById } from '../data/customers';
 import { ambientById } from '../data/ambientCustomers';
 import { CharacterStoryManager } from '../systems/CharacterStoryManager';
+import { RestaurantDecorView } from '../game/RestaurantDecorView';
+import { DecorationShop } from '../ui/DecorationShop';
 import { SpecialOrderManager } from '../systems/SpecialOrderManager';
 import { SpecialOrderNotes } from '../ui/SpecialOrderNotes';
 import { LetterManager } from '../systems/LetterManager';
@@ -65,6 +67,7 @@ export class RestaurantScene extends Phaser.Scene {
     private currentRecipe?: Recipe;
     private cookingResult?: CookingResult;
     private environment!: RestaurantEnvironment;
+    private decorView?: RestaurantDecorView;
     private customerMeal?: CustomerMeal;
     private guestVisit?: CustomerVisit;
     private guestGap?: Phaser.Time.TimerEvent;
@@ -139,6 +142,7 @@ export class RestaurantScene extends Phaser.Scene {
             this.guestVisit?.cleanup();
             this.guestGap?.remove(false);
             this.environment.cleanup();
+            this.decorView?.destroy(); this.decorView=undefined;
             (this.guest instanceof NabiView || this.guest instanceof DubuView || this.guest instanceof KkamangView) && this.guest.cleanup();
             window.removeEventListener('pagehide', this.saveOnHide);
             this.lockGuestInput(false);
@@ -303,21 +307,11 @@ export class RestaurantScene extends Phaser.Scene {
             r(x - 18, 514, 40, 6, 0x8c5145);
             r(x - 1, 478, 4, 30, 0xf7d69a);
         }
+        this.decorView = new RestaurantDecorView(this, awning, signBoard, this.stallSign, this.lanterns);
         this.environment = new RestaurantEnvironment(this, awning, sign, this.lanterns);
         this.decorations();
     }
-    decorations() {
-        if (this.save.upgrades.lamp)
-            this.lanterns.forEach(l => l.setFillStyle(0xffd69a));
-        if (this.save.upgrades.sign) {
-            this.stallSign.setFontSize(22).setText('길냥이 식당 · 夜');
-            this.stallSign.texture.setFilter(Phaser.Textures.FilterMode.LINEAR);
-        }
-        if (this.save.upgrades.chair) {
-            this.add.rectangle(240, 742, 58, 8, 0xb16f66);
-            this.add.rectangle(520, 742, 58, 8, 0xb16f66);
-        }
-    }
+    decorations() { this.decorView?.apply(this.save); }
     hud() { $('hud').innerHTML = `<div class="topline"><span class="mini-brand">골목의 작은 불빛</span><div class="hud-actions"><button id="sound" class="sound" aria-label="소리 ${this.save.settings.sound ? '끄기' : '켜기'}">${icon('sound')}<span>${this.save.settings.sound ? 'ON' : 'OFF'}</span></button><button id="settings" class="sound settings-button" aria-label="설정">설정</button></div></div><div class="stats"><div>${icon('moon')}<span><small>오늘의 밤</small><b>${this.save.night}<em>번째 밤</em></b></span></div><div>${icon('coin')}<span><small>보유 골드</small><b>${this.save.gold}<em>G</em></b></span></div><div>${icon('star')}<span><small>식당 레벨</small><b>${this.save.level}<em>LV</em></b></span></div></div>`; on('sound', () => { audio.unlock(); this.save.settings.sound = audio.toggle(); SaveManager.save(this.save); this.hud(); }); on('settings', () => this.settings()); this.kitchenStatus(); }
     private kitchenStatus() {
         let status = document.getElementById('kitchen-status');
@@ -654,20 +648,13 @@ export class RestaurantScene extends Phaser.Scene {
         for (const r of RecipeManager.all()) on('kitchen-style-' + r.id, () => { const m = KitchenManager.mastery(this.save, r.id); if (m.xp < 30) return; m.decorated = !m.decorated; (this.save.recipeMastery ??= {})[r.id] = m; SaveManager.save(this.save); this.menu(); });
     }
     shop() {
-        modal(`<div class="sheet-head"><div><span class="eyebrow">A COZIER PLACE</span><h2>식당을 조금 더 포근하게</h2></div><button id="close" class="close" aria-label="닫기">×</button></div><p class="muted">보유 골드 <b>${this.save.gold} G</b></p>${upgrades.map(u => `<div class="upgrade"><div><h3>${u.name}</h3><p>${u.description}</p></div><button id="buy-${u.id}" ${this.save.upgrades[u.id] || this.save.gold < u.cost ? 'disabled' : ''}>${this.save.upgrades[u.id] ? '꾸밈 완료' : u.cost + ' G'}</button></div>`).join('')}<div class="hint">다음 친구들의 방문 · 보리 4번째 밤 / 달이 7번째 밤 / 호두 10번째 밤</div>`);
-        on('close', closeModal);
-        for (const u of upgrades)
-            on('buy-' + u.id, () => {
-                if (this.save.gold < u.cost || this.save.upgrades[u.id])
-                    return;
-                this.save.gold -= u.cost;
-                this.save.upgrades[u.id] = 1;
-                SaveManager.save(this.save);
-                this.decorations();
-                this.hud();
-                audio.success();
-                this.shop();
-                toast('식당이 조금 더 포근해졌어요.');
+        const changed = () => { SaveManager.save(this.save); this.decorations(); this.hud(); audio.success(); toast('식당에 새로운 온기를 더했어요.'); };
+        const html = () => upgrades.map(u => `<div class="upgrade"><div><h3>${u.name}</h3><p>${u.description}</p></div><button id="buy-${u.id}" ${this.save.upgrades[u.id] || this.save.gold < u.cost ? 'disabled' : ''}>${this.save.upgrades[u.id] ? '설치 완료' : u.cost + ' G'}</button></div>`).join('');
+        new DecorationShop(this.save, changed, html, () => {
+            for(const u of upgrades) on('buy-'+u.id, () => {
+                if(this.save.gold<u.cost || this.save.upgrades[u.id])return;
+                this.save.gold-=u.cost; this.save.upgrades[u.id]=1; changed(); this.shop();
             });
+        });
     }
 }

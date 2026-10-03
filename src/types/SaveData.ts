@@ -24,6 +24,7 @@ export interface SaveData {
     pendingRecipeUnlocks: string[];
     upgrades: Record<string, number>;
     recipeMastery?: Record<string, RecipeMastery>;
+    restaurantDecor?: import('../systems/DecorationManager').RestaurantDecor;
     specialOrderHistory?: Record<string, import('../systems/SpecialOrderManager').SpecialOrderHistory>;
     settings: {
         sound: boolean;

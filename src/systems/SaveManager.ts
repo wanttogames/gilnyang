@@ -8,6 +8,7 @@ import { customers } from '../data/customers';
 import { recipes } from '../data/recipes';
 import { WeatherManager } from './WeatherManager';
 import { RecipeManager } from './RecipeManager';
+import { DecorationManager } from './DecorationManager';
 import { SpecialOrderManager } from './SpecialOrderManager';
 import { LetterManager } from './LetterManager';
 import { KitchenManager } from './KitchenManager';
@@ -35,6 +36,7 @@ export class SaveManager {
             }
             base.dongguLetters = LetterManager.restore(s.dongguLetters);
             base.specialOrderHistory = SpecialOrderManager.restoreHistory(s.specialOrderHistory);
+            base.restaurantDecor = DecorationManager.restore(s.restaurantDecor);
             base.gold = s.gold;
             base.recipeMastery = KitchenManager.restoreMastery(s.recipeMastery);
             base.night = s.night;

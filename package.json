@@ -1,7 +1,7 @@
 {
   "name": "gilnyang",
   "private": true,
-  "version": "0.5.2",
+  "version": "0.5.3",
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
@@ -16,7 +16,8 @@
     "test:bread": "node tests/bread-cooking.cjs",
     "test:kitchen": "node tests/kitchen-progression.cjs && node tests/kitchen-score-flow.cjs",
     "test:letters": "node tests/donggu-letters.cjs",
-    "test:special": "node tests/special-orders.cjs"
+    "test:special": "node tests/special-orders.cjs",
+    "test:decor": "node tests/restaurant-decor.cjs"
   },
   "dependencies": {
     "phaser": "^3.90.0"
