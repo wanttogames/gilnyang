@@ -1,3 +1,4 @@
+import { friendOrder } from '../data/friendDialogues';
 import { dongguOwnerOrders, dongguOwnerThanks } from '../data/dongguDialogues';
 import type { NightConditionId } from '../data/nightConditions';
 import { ambientById } from '../data/ambientCustomers';
@@ -16,6 +17,9 @@ export class DialogueManager {
             if (condition === 'cold' && Math.random() < .35) return '바람이 차네요. ' + recipe.name + ' 주세요.';
             return ambient.dialogues[Math.floor(Math.random() * ambient.dialogues.length)];
         }
+        if (id === 'kkamang' && progress?.characterStory?.pending?.eventId === 'KKAMANG_STORY_4' && recipe.id === 'ramen') return '오늘은 계란 두 개.';
+        const everyday = friendOrder(id, weather, progress, recipe.name);
+        if (everyday) return everyday;
         if (id === 'donggu') {
             // Occasional owner memories coexist with the unchanged grandmother story.
             if (Math.random() < .35) return dongguOwnerOrders[Math.floor(Math.random() * dongguOwnerOrders.length)].replace('{food}', recipe.name);

@@ -1,3 +1,4 @@
+import { friends } from '../data/friendDialogues';
 import { customers, customerById } from '../data/customers';
 import { ambientCustomers } from '../data/ambientCustomers';
 import { nightConditions, type NightConditionId } from '../data/nightConditions';
@@ -54,6 +55,12 @@ export class CustomerManager {
         const pairs: number[] = [];
         for (let i=0;i+1<queue.length;i++) {
             if (this.solo(s,queue[i]) || this.solo(s,queue[i+1])) continue;
+            const partner = queue.findIndex((id,j)=>j>i && friends(queue[i],id) && !this.solo(s,id));
+            if (partner > i && random() < .6) {
+                [queue[i+1],queue[partner]]=[queue[partner],queue[i+1]];
+                pairs.push(i); i++; continue;
+            }
+            if (queue[i]===queue[i+1] || this.solo(s,queue[i+1])) continue;
             if (random() < .2) { pairs.push(i); i++; }
         }
         return pairs;

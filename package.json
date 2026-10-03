@@ -1,7 +1,7 @@
 {
   "name": "gilnyang",
   "private": true,
-  "version": "0.6.0",
+  "version": "0.6.1",
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
@@ -19,7 +19,8 @@
     "test:special": "node tests/special-orders.cjs",
     "test:decor": "node tests/restaurant-decor.cjs",
     "test:rumor-rain": "node tests/rumor-rain.cjs",
-    "test:festival": "node tests/festival.cjs"
+    "test:festival": "node tests/festival.cjs",
+    "test:friends": "node tests/friend-dialogues.cjs"
   },
   "dependencies": {
     "phaser": "^3.90.0"

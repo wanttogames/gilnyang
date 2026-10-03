@@ -1,3 +1,4 @@
+import { friendConversation } from '../data/friendDialogues';
 import { DongguView } from '../game/DongguView';
 import { OwnerPrologue } from '../game/OwnerPrologue';
 import type { CookingResult } from '../types/Cooking';
@@ -447,7 +448,8 @@ export class RestaurantScene extends Phaser.Scene {
     }
     private chooseOrder() {
         this.phase = 'order'; this.lockGuestInput(false);
-        panel(`<div class="eyebrow">두 자리의 따뜻한 한 끼</div><h2>누구부터 준비할까요?</h2><div class="pair-orders">${this.activeGuests.map((slot,i) => `<div class="pair-order"><div><strong>${slot.customer.name} · ${slot.recipe.name}</strong><p>${RumorManager.greeting(this.save,slot.customer.id) ?? SpecialOrderManager.detail(this.save,slot.customer.id)?.quote ?? DialogueManager.order(slot.customer.id,this.save.weather,slot.recipe,this.progress(slot.customer.id),this.save.activeNight?.condition)}</p>${SpecialOrderNotes.card(this.save,slot.customer.id)}</div><button id="cook-order-${i}" class="primary">요리</button></div>`).join('')}</div>`);
+        const chat = friendConversation(this.activeGuests[0].customer.id,this.activeGuests[1].customer.id,this.save.weather,this.save.night);
+        panel(`${chat.length ? `<div class="friend-conversation"><div class="eyebrow">함께 온 친구들의 이야기</div>${chat.map(line=>`<p><strong>${line.name}</strong> ${line.text}</p>`).join('')}</div>` : ''}<div class="eyebrow">두 자리의 따뜻한 한 끼</div><h2>누구부터 준비할까요?</h2><div class="pair-orders">${this.activeGuests.map((slot,i) => `<div class="pair-order"><div><strong>${slot.customer.name} · ${slot.recipe.name}</strong><p>${RumorManager.greeting(this.save,slot.customer.id) ?? SpecialOrderManager.detail(this.save,slot.customer.id)?.quote ?? DialogueManager.order(slot.customer.id,this.save.weather,slot.recipe,this.progress(slot.customer.id),this.save.activeNight?.condition)}</p>${SpecialOrderNotes.card(this.save,slot.customer.id)}</div><button id="cook-order-${i}" class="primary">요리</button></div>`).join('')}</div>`);
         this.activeGuests.forEach((slot,i) => on('cook-order-'+i,() => {
             if (this.phase !== 'order' || slot.state !== 'waiting') return;
             // The persisted queue follows actual serving order, including a refresh in the mini-game.
